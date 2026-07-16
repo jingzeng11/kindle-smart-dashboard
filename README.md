@@ -54,3 +54,5 @@ curl --output /tmp/dashboard.png http://127.0.0.1:8080/dashboard.png
 - `DashboardCLI`：`render` 与 `serve` 命令
 
 完整的 V0.1 范围与验收标准见 [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md)。
+
+下一阶段的只读 Apple Calendar 接入约束与验收标准见 [docs/APPLE_CALENDAR_INTEGRATION.md](docs/APPLE_CALENDAR_INTEGRATION.md)。

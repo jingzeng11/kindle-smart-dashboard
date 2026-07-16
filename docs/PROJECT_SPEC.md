@@ -152,3 +152,5 @@ Create the package, models, mock data, renderer, render command, HTTP server, te
 ## 10. Definition of Done
 
 A feature is complete only when the project builds, tests pass, documented commands work, the PNG has been generated and inspected, and server endpoints have been verified locally.
+
+The next scoped phase is defined separately in [APPLE_CALENDAR_INTEGRATION.md](APPLE_CALENDAR_INTEGRATION.md).
