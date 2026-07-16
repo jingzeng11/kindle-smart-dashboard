@@ -2,7 +2,7 @@
 
 把越狱 Kindle 8（KT3）变成低功耗的 Apple 风格电子墨水日历显示屏。
 
-当前已完成 V0.2：模拟或只读 Apple Calendar 日程 → macOS 原生 PNG 渲染 → 本地 HTTP 服务。天气目前只用于排版验证，不包含真实接口、定位或自动更新；Kindle 端自动刷新仍未接入。
+当前已完成 V0.3：模拟或只读 Apple Calendar 日程 + 成都双流区实时天气 → macOS 原生 PNG 渲染 → 本地 HTTP 服务。Kindle 端自动刷新仍未接入。
 
 ## 环境要求
 
@@ -27,12 +27,14 @@ swift run DashboardCLI render --output ./output/dashboard.png
 
 生成结果为 600 × 800 竖屏 PNG，包含中文日程、模拟待办和天气排版数据。
 
-显式选择数据源：
+显式选择日程和天气数据源：
 
 ```bash
-swift run DashboardCLI render --source mock --output ./output/dashboard.png
-open -W ".build/Kindle Smart Dashboard Calendar Access.app" --args render --source calendar --output "$PWD/output/dashboard.png"
+swift run DashboardCLI render --source mock --weather mock --output ./output/dashboard.png
+open -W ".build/Kindle Smart Dashboard Calendar Access.app" --args render --source calendar --weather live --output "$PWD/output/dashboard.png"
 ```
+
+`--weather live` 默认使用成都双流区坐标 `30.58, 103.92` 和 `Asia/Shanghai` 时区。可用 `--latitude`、`--longitude` 覆盖坐标。实时请求失败时会读取 `~/Library/Caches/KindleSmartDashboard/weather.json` 中最后一次成功结果；从未成功获取且网络不可用时，命令会返回明确错误，不会覆盖已有 PNG。
 
 ## Apple Calendar 权限试验
 
@@ -74,6 +76,7 @@ curl --output /tmp/dashboard.png http://127.0.0.1:8080/dashboard.png
 
 - `DashboardModels`：日程、待办和快照模型
 - `DashboardCalendar`：Apple Calendar 权限、当天区间和 EventKit 只读查询
+- `DashboardWeather`：双流区实时天气、WMO 天气代码转换和本地缓存降级
 - `DashboardRenderer`：600 × 800 原生 PNG 渲染器
 - `DashboardServer`：小型局域网 HTTP 服务
 - `DashboardCLI`：`render` 与 `serve` 命令
@@ -81,3 +84,5 @@ curl --output /tmp/dashboard.png http://127.0.0.1:8080/dashboard.png
 完整的 V0.1 范围与验收标准见 [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md)。
 
 V0.2 的只读 Apple Calendar 接入约束与验收标准见 [docs/APPLE_CALENDAR_INTEGRATION.md](docs/APPLE_CALENDAR_INTEGRATION.md)。
+
+V0.3 的实时天气设计与验收记录见 [docs/WEATHER_INTEGRATION.md](docs/WEATHER_INTEGRATION.md)。天气数据由 [Open-Meteo](https://open-meteo.com/) 提供，采用 [CC BY 4.0](https://open-meteo.com/en/license) 许可；本项目将摄氏温度取整并把 WMO 天气代码转换为简短中文描述。

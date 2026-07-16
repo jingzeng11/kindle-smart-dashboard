@@ -10,6 +10,7 @@ let package = Package(
         .library(name: "DashboardRenderer", targets: ["DashboardRenderer"]),
         .library(name: "DashboardServer", targets: ["DashboardServer"]),
         .library(name: "DashboardCalendar", targets: ["DashboardCalendar"]),
+        .library(name: "DashboardWeather", targets: ["DashboardWeather"]),
         .executable(name: "DashboardCLI", targets: ["DashboardCLI"])
     ],
     targets: [
@@ -23,9 +24,13 @@ let package = Package(
             name: "DashboardCalendar",
             dependencies: ["DashboardModels"]
         ),
+        .target(
+            name: "DashboardWeather",
+            dependencies: ["DashboardModels"]
+        ),
         .executableTarget(
             name: "DashboardCLI",
-            dependencies: ["DashboardModels", "DashboardRenderer", "DashboardServer", "DashboardCalendar"],
+            dependencies: ["DashboardModels", "DashboardRenderer", "DashboardServer", "DashboardCalendar", "DashboardWeather"],
             exclude: ["Info.plist"],
             linkerSettings: [
                 .unsafeFlags([
@@ -51,6 +56,10 @@ let package = Package(
         .testTarget(
             name: "DashboardCalendarTests",
             dependencies: ["DashboardCalendar"]
+        ),
+        .testTarget(
+            name: "DashboardWeatherTests",
+            dependencies: ["DashboardWeather"]
         )
     ]
 )

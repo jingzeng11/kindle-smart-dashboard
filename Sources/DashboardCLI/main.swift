@@ -2,6 +2,7 @@ import DashboardCalendar
 import DashboardModels
 import DashboardRenderer
 import DashboardServer
+import DashboardWeather
 import Foundation
 
 @main
@@ -37,6 +38,7 @@ struct DashboardCLI {
         case "render":
             let output = value(after: "--output", in: arguments) ?? "./output/dashboard.png"
             let source = value(after: "--source", in: arguments) ?? "mock"
+            let weatherSource = value(after: "--weather", in: arguments) ?? "live"
             let url = URL(fileURLWithPath: output).standardizedFileURL
             let now = Date()
             let events: [CalendarEvent]
@@ -49,9 +51,31 @@ struct DashboardCLI {
             default:
                 throw CLIError.invalidSource(source)
             }
-            try DashboardRenderer().render(MockData.snapshot(now: now, events: events), to: url)
+
+            let weather: WeatherSummary
+            switch weatherSource {
+            case "mock":
+                weather = MockData.weather
+            case "live":
+                let location = try weatherLocation(from: arguments)
+                let provider = CachedWeatherProvider(upstream: OpenMeteoWeatherProvider())
+                weather = try await provider.weather(for: location)
+            default:
+                throw CLIError.invalidWeatherSource(weatherSource)
+            }
+
+            try DashboardRenderer().render(
+                MockData.snapshot(
+                    now: now,
+                    events: events,
+                    weather: weather,
+                    footerMessage: weatherSource == "live" ? "天气 Open-Meteo" : "本地数据"
+                ),
+                to: url
+            )
             print("已生成：\(url.path)（600 × 800 PNG）")
             print("日程来源：\(source)")
+            print("天气来源：\(weatherSource)")
 
         case "serve":
             let host = value(after: "--host", in: arguments) ?? "0.0.0.0"
@@ -83,6 +107,26 @@ struct DashboardCLI {
         return arguments[index + 1]
     }
 
+    private static func weatherLocation(from arguments: [String]) throws -> WeatherLocation {
+        let fallback = WeatherLocation.chengduShuangliu
+        let latitude = try coordinate(after: "--latitude", in: arguments) ?? fallback.latitude
+        let longitude = try coordinate(after: "--longitude", in: arguments) ?? fallback.longitude
+        return WeatherLocation(
+            name: latitude == fallback.latitude && longitude == fallback.longitude ? fallback.name : "自定义位置",
+            latitude: latitude,
+            longitude: longitude,
+            timeZoneIdentifier: fallback.timeZoneIdentifier
+        )
+    }
+
+    private static func coordinate(after flag: String, in arguments: [String]) throws -> Double? {
+        guard let text = value(after: flag, in: arguments) else { return nil }
+        guard let value = Double(text) else {
+            throw CLIError.invalidCoordinate(flag: flag, value: text)
+        }
+        return value
+    }
+
     private static func printUsage() {
         print("""
         Kindle Smart Dashboard
@@ -90,8 +134,9 @@ struct DashboardCLI {
         用法：
           swift run DashboardCLI calendar-status
           swift run DashboardCLI calendar-authorize
-          swift run DashboardCLI render --source mock --output ./output/dashboard.png
-          swift run DashboardCLI render --source calendar --output ./output/dashboard.png
+          swift run DashboardCLI render --source mock --weather mock --output ./output/dashboard.png
+          swift run DashboardCLI render --source calendar --weather live --output ./output/dashboard.png
+            [--latitude 30.58 --longitude 103.92]
           swift run DashboardCLI serve --host 0.0.0.0 --port 8080 [--output ./output/dashboard.png]
         """)
     }
@@ -100,6 +145,8 @@ struct DashboardCLI {
 private enum CLIError: Error, LocalizedError {
     case invalidPort(String)
     case invalidSource(String)
+    case invalidWeatherSource(String)
+    case invalidCoordinate(flag: String, value: String)
     case unknownCommand(String)
 
     var errorDescription: String? {
@@ -108,6 +155,10 @@ private enum CLIError: Error, LocalizedError {
             return "端口必须是 1 到 65535 之间的整数：\(value)"
         case let .invalidSource(value):
             return "未知日程来源：\(value)。请使用 mock 或 calendar。"
+        case let .invalidWeatherSource(value):
+            return "未知天气来源：\(value)。请使用 mock 或 live。"
+        case let .invalidCoordinate(flag, value):
+            return "\(flag) 必须是有效数字：\(value)"
         case let .unknownCommand(command):
             return "未知命令：\(command)"
         }
@@ -130,7 +181,19 @@ private enum MockData {
         ]
     }
 
-    static func snapshot(now: Date = Date(), events: [CalendarEvent]? = nil) -> DashboardSnapshot {
+    static let weather = WeatherSummary(
+        condition: "晴",
+        currentTemperature: 28,
+        lowTemperature: 24,
+        highTemperature: 33
+    )
+
+    static func snapshot(
+        now: Date = Date(),
+        events: [CalendarEvent]? = nil,
+        weather: WeatherSummary = weather,
+        footerMessage: String = "本地数据"
+    ) -> DashboardSnapshot {
         DashboardSnapshot(
             date: now,
             events: events ?? self.events(now: now),
@@ -139,13 +202,8 @@ private enum MockData {
                 DashboardReminder(title: "回复重要邮件"),
                 DashboardReminder(title: "阅读 30 分钟")
             ],
-            footer: FooterStatus(updatedAt: now),
-            weather: WeatherSummary(
-                condition: "晴",
-                currentTemperature: 28,
-                lowTemperature: 24,
-                highTemperature: 33
-            )
+            footer: FooterStatus(updatedAt: now, message: footerMessage),
+            weather: weather
         )
     }
 }

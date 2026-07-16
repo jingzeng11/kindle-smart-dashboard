@@ -42,7 +42,7 @@ public struct FooterStatus: Equatable, Sendable {
     }
 }
 
-public struct WeatherSummary: Equatable, Sendable {
+public struct WeatherSummary: Codable, Equatable, Sendable {
     public let condition: String
     public let currentTemperature: Int
     public let lowTemperature: Int
