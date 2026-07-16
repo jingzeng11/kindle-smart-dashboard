@@ -19,9 +19,7 @@ restore_kindle() {
     if command -v lipc-set-prop >/dev/null 2>&1; then
         lipc-set-prop -- com.lab126.powerd preventScreenSaver 0 >/dev/null 2>&1 || true
     fi
-    if [ -x /etc/init.d/framework ]; then
-        /etc/init.d/framework start >/dev/null 2>&1 || true
-    fi
+    resume_kindle_ui
     log_message "Dashboard mode stopped"
 }
 
@@ -32,9 +30,11 @@ printf '%s\n' "$$" > "$pid_path"
 if command -v lipc-set-prop >/dev/null 2>&1; then
     lipc-set-prop -- com.lab126.powerd preventScreenSaver 1 >/dev/null 2>&1 || true
 fi
-if [ -x /etc/init.d/framework ]; then
-    /etc/init.d/framework stop >/dev/null 2>&1 || true
-fi
+
+# Give KUAL enough time to close its menu and return to Home before freezing
+# the UI. The next eips draw then remains visible instead of being repainted.
+sleep 2
+pause_kindle_ui || true
 
 log_message "Dashboard mode started; refresh interval ${REFRESH_SECONDS}s"
 

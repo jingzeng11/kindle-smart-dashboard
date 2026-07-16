@@ -11,12 +11,58 @@ data_dir=${DASHBOARD_DATA_DIR:-"$extension_root/data"}
 image_path="$data_dir/dashboard.png"
 temporary_path="$data_dir/dashboard.download"
 pid_path="$data_dir/dashboard.pid"
+ui_state_path="$data_dir/ui.state"
 log_path=${DASHBOARD_LOG_FILE:-"$data_dir/dashboard.log"}
 
 mkdir -p "$data_dir"
 
 log_message() {
     printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$log_path"
+}
+
+pause_kindle_ui() {
+    rm -f "$ui_state_path"
+
+    # On newer 5.x firmware the Java UI is supervised and an init-script stop
+    # can be restarted immediately. Suspending cvm keeps the UI from repainting
+    # over eips while leaving Wi-Fi and the dashboard worker alive.
+    if command -v killall >/dev/null 2>&1 && killall -STOP cvm >/dev/null 2>&1; then
+        printf '%s\n' cvm > "$ui_state_path"
+        log_message "Kindle UI paused with cvm"
+        return 0
+    fi
+
+    if [ -x /etc/init.d/framework ]; then
+        /etc/init.d/framework stop >/dev/null 2>&1 || return 1
+        printf '%s\n' framework > "$ui_state_path"
+        log_message "Kindle UI paused with framework"
+        return 0
+    fi
+
+    log_message "Unable to pause Kindle UI"
+    return 1
+}
+
+resume_kindle_ui() {
+    pause_method=""
+    if [ -f "$ui_state_path" ]; then
+        pause_method=$(sed -n '1p' "$ui_state_path")
+    fi
+
+    case "$pause_method" in
+        cvm)
+            command -v killall >/dev/null 2>&1 && killall -CONT cvm >/dev/null 2>&1 || true
+            ;;
+        framework)
+            [ -x /etc/init.d/framework ] && /etc/init.d/framework start >/dev/null 2>&1 || true
+            ;;
+        *)
+            # Also recover safely after an interrupted upgrade or stale state.
+            command -v killall >/dev/null 2>&1 && killall -CONT cvm >/dev/null 2>&1 || true
+            ;;
+    esac
+
+    rm -f "$ui_state_path"
 }
 
 find_eips() {

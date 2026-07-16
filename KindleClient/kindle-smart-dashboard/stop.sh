@@ -19,8 +19,6 @@ done
 if command -v lipc-set-prop >/dev/null 2>&1; then
     lipc-set-prop -- com.lab126.powerd preventScreenSaver 0 >/dev/null 2>&1 || true
 fi
-if [ -x /etc/init.d/framework ]; then
-    /etc/init.d/framework start >/dev/null 2>&1 || true
-fi
+resume_kindle_ui
 rm -f "$pid_path"
 log_message "Dashboard stop requested"

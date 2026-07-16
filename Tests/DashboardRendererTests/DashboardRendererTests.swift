@@ -1,3 +1,4 @@
+import AppKit
 import DashboardModels
 import DashboardRenderer
 import Foundation
@@ -48,6 +49,18 @@ final class DashboardRendererTests: XCTestCase {
         )
 
         XCTAssertFalse(try DashboardRenderer().render(value).isEmpty)
+    }
+
+    func testRenderKeepsWhitePaperInDarkAppearance() throws {
+        let appearance = try XCTUnwrap(NSAppearance(named: .darkAqua))
+        var result: Result<Data, Error>?
+        appearance.performAsCurrentDrawingAppearance {
+            result = Result { try DashboardRenderer().render(snapshot()) }
+        }
+        let data = try XCTUnwrap(result).get()
+        let bitmap = try XCTUnwrap(NSBitmapImageRep(data: data))
+        let corner = try XCTUnwrap(bitmap.colorAt(x: 0, y: 0)?.usingColorSpace(.deviceGray))
+        XCTAssertEqual(corner.whiteComponent, 1, accuracy: 0.01)
     }
 
     private func snapshot(title: String = "中文日程") -> DashboardSnapshot {

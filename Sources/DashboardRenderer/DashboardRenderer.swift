@@ -19,6 +19,9 @@ public enum DashboardRendererError: Error, LocalizedError {
 public struct DashboardRenderer {
     public static let width = 600
     public static let height = 800
+    private static let paperColor = NSColor(deviceWhite: 1, alpha: 1)
+    private static let inkColor = NSColor(deviceWhite: 0, alpha: 1)
+    private static let mutedInkColor = NSColor(deviceWhite: 0.35, alpha: 1)
 
     public init() {}
 
@@ -42,7 +45,7 @@ public struct DashboardRenderer {
         NSGraphicsContext.current = context
         defer { NSGraphicsContext.restoreGraphicsState() }
 
-        NSColor.white.setFill()
+        Self.paperColor.setFill()
         NSRect(x: 0, y: 0, width: Self.width, height: Self.height).fill()
 
         drawHeader(snapshot)
@@ -116,7 +119,7 @@ public struct DashboardRenderer {
             top: 108,
             height: 28,
             size: 17,
-            color: .darkGray,
+            color: Self.mutedInkColor,
             alignment: .right,
             x: 340,
             width: 220
@@ -128,22 +131,26 @@ public struct DashboardRenderer {
 
         guard !snapshot.events.isEmpty else {
             drawText("今天没有安排", top: 242, height: 44, size: 29, weight: .medium)
-            drawText("留一点时间给自己", top: 295, height: 30, size: 20, color: .darkGray)
+            drawText("留一点时间给自己", top: 295, height: 30, size: 20, color: Self.mutedInkColor)
             return
         }
 
         let upcoming = snapshot.events.filter { $0.endDate >= snapshot.date }
         guard let next = upcoming.first else {
-            drawText("今日安排已结束", top: 242, height: 44, size: 29, weight: .medium)
-            drawText("辛苦了，享受剩余时间", top: 295, height: 30, size: 20, color: .darkGray)
+            drawText("今日已完成  \(snapshot.events.count) 项", top: 242, height: 44, size: 29, weight: .medium)
+            drawText("今天的日程", top: 301, height: 25, size: 18, color: Self.mutedInkColor)
+            for (index, event) in snapshot.events.suffix(3).enumerated() {
+                let top = 340 + CGFloat(index * 37)
+                drawText("\(listTime(for: event))  \(event.title)", top: top, height: 28, size: 19)
+            }
             return
         }
-        drawText("下一项", top: 231, height: 26, size: 18, color: .darkGray)
+        drawText("下一项", top: 231, height: 26, size: 18, color: Self.mutedInkColor)
         drawText(next.title, top: 266, height: 44, size: 30, weight: .semibold)
         drawText(eventDetails(next), top: 318, height: 30, size: 20)
 
         let remaining = Array(upcoming.dropFirst())
-        drawText("稍后  \(remaining.count) 项", top: 377, height: 25, size: 18, color: .darkGray)
+        drawText("稍后  \(remaining.count) 项", top: 377, height: 25, size: 18, color: Self.mutedInkColor)
         for (index, event) in remaining.prefix(2).enumerated() {
             let top = 414 + CGFloat(index * 37)
             drawText("\(listTime(for: event))  \(event.title)", top: top, height: 28, size: 19)
@@ -155,7 +162,7 @@ public struct DashboardRenderer {
         drawText("待办事项", top: 524, height: 34, size: 25, weight: .semibold)
 
         if active.isEmpty {
-            drawText("暂无待办", top: 584, height: 34, size: 23, color: .darkGray)
+            drawText("暂无待办", top: 584, height: 34, size: 23, color: Self.mutedInkColor)
         } else {
             for (index, reminder) in active.prefix(3).enumerated() {
                 let top = 580 + CGFloat(index * 48)
@@ -170,7 +177,7 @@ public struct DashboardRenderer {
             top: 752,
             height: 24,
             size: 16,
-            color: .darkGray,
+            color: Self.mutedInkColor,
             alignment: .center
         )
     }
@@ -190,7 +197,7 @@ public struct DashboardRenderer {
         height: CGFloat,
         size: CGFloat,
         weight: NSFont.Weight = .regular,
-        color: NSColor = .black,
+        color: NSColor = DashboardRenderer.inkColor,
         alignment: NSTextAlignment = .left,
         x: CGFloat = 40,
         width: CGFloat = 520

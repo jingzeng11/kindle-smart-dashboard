@@ -1,6 +1,7 @@
 #!/bin/zsh
 
 set -euo pipefail
+export COPYFILE_DISABLE=1
 
 volume="${1:-/Volumes/Kindle}"
 mac_ip="$(ipconfig getifaddr en0 2>/dev/null || true)"
