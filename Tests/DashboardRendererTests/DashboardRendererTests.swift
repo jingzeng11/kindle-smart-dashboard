@@ -38,7 +38,13 @@ final class DashboardRendererTests: XCTestCase {
             date: now,
             events: [CalendarEvent(title: title, startDate: now, endDate: now.addingTimeInterval(3_600))],
             reminders: [DashboardReminder(title: "完成测试")],
-            footer: FooterStatus(updatedAt: now)
+            footer: FooterStatus(updatedAt: now),
+            weather: WeatherSummary(
+                condition: "晴",
+                currentTemperature: 28,
+                lowTemperature: 24,
+                highTemperature: 33
+            )
         )
     }
 }

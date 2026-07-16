@@ -104,7 +104,13 @@ private enum MockData {
                 DashboardReminder(title: "回复重要邮件"),
                 DashboardReminder(title: "阅读 30 分钟")
             ],
-            footer: FooterStatus(updatedAt: now)
+            footer: FooterStatus(updatedAt: now),
+            weather: WeatherSummary(
+                condition: "晴",
+                currentTemperature: 28,
+                lowTemperature: 24,
+                highTemperature: 33
+            )
         )
     }
 }

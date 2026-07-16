@@ -81,6 +81,7 @@ The renderer generates:
 The V0.1 image contains:
 
 - date and weekday
+- a compact mock weather summary in the header
 - next event
 - remaining events today
 - todo items
@@ -101,7 +102,7 @@ swift run DashboardCLI serve --host 0.0.0.0 --port 8080
 
 ## 5. Non-Goals for V0.1
 
-Do not implement Apple Calendar, Apple Reminders, weather, stocks, AI summaries, Home Assistant, a message board, Wi-Fi QR codes, Kindle automatic refresh, KUAL extensions, a macOS GUI, cloud services, accounts, remote access, or multiple-device support.
+Do not implement Apple Calendar, Apple Reminders, real weather data integration, location services, stocks, AI summaries, Home Assistant, a message board, Wi-Fi QR codes, Kindle automatic refresh, KUAL extensions, a macOS GUI, cloud services, accounts, remote access, or multiple-device support. V0.1 uses only a fixed mock weather summary to validate the header layout.
 
 ## 6. Technical Principles
 
@@ -137,6 +138,7 @@ KindleSmartDashboard/
 - `swift build` and `swift test` succeed.
 - The render command creates a valid 600 × 800 PNG.
 - Chinese mock content displays correctly.
+- The optional weather summary fits in the right side of the header without overlapping the date.
 - Empty lists do not crash.
 - Long event titles do not overflow the canvas.
 - The server starts successfully.

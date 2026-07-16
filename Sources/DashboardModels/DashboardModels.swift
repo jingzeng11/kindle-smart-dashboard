@@ -34,22 +34,44 @@ public struct FooterStatus: Equatable, Sendable {
     }
 }
 
+public struct WeatherSummary: Equatable, Sendable {
+    public let condition: String
+    public let currentTemperature: Int
+    public let lowTemperature: Int
+    public let highTemperature: Int
+
+    public init(
+        condition: String,
+        currentTemperature: Int,
+        lowTemperature: Int,
+        highTemperature: Int
+    ) {
+        self.condition = condition
+        self.currentTemperature = currentTemperature
+        self.lowTemperature = lowTemperature
+        self.highTemperature = highTemperature
+    }
+}
+
 public struct DashboardSnapshot: Equatable, Sendable {
     public let date: Date
     public let events: [CalendarEvent]
     public let reminders: [DashboardReminder]
     public let footer: FooterStatus
+    public let weather: WeatherSummary?
 
     public init(
         date: Date,
         events: [CalendarEvent],
         reminders: [DashboardReminder],
-        footer: FooterStatus
+        footer: FooterStatus,
+        weather: WeatherSummary? = nil
     ) {
         self.date = date
         self.events = events.sorted { $0.startDate < $1.startDate }
         self.reminders = reminders
         self.footer = footer
+        self.weather = weather
     }
 
     public var nextEvent: CalendarEvent? {

@@ -2,7 +2,7 @@
 
 把越狱 Kindle 8（KT3）变成低功耗的 Apple 风格电子墨水日历显示屏。
 
-V0.1 只验证一条最小链路：模拟日历数据 → macOS 原生 PNG 渲染 → 本地 HTTP 服务。Kindle 端自动刷新与真实 Apple Calendar 接入不在本阶段范围内。
+V0.1 只验证一条最小链路：模拟日历与天气数据 → macOS 原生 PNG 渲染 → 本地 HTTP 服务。天气目前只用于排版验证，不包含真实接口、定位或自动更新；Kindle 端自动刷新与真实 Apple Calendar 接入也不在本阶段范围内。
 
 ## 环境要求
 

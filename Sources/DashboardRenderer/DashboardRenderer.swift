@@ -69,8 +69,58 @@ public struct DashboardRenderer {
     }
 
     private func drawHeader(_ snapshot: DashboardSnapshot) {
-        drawText(dayFormatter.string(from: snapshot.date), top: 38, height: 70, size: 58, weight: .bold)
-        drawText(dateFormatter.string(from: snapshot.date), top: 108, height: 34, size: 25, weight: .medium)
+        drawText(
+            dayFormatter.string(from: snapshot.date),
+            top: 38,
+            height: 70,
+            size: 58,
+            weight: .bold,
+            width: 260
+        )
+        drawText(
+            dateFormatter.string(from: snapshot.date),
+            top: 108,
+            height: 34,
+            size: 25,
+            weight: .medium,
+            width: 300
+        )
+        if let weather = snapshot.weather {
+            drawWeather(weather)
+        }
+    }
+
+    private func drawWeather(_ weather: WeatherSummary) {
+        drawText(
+            weather.condition,
+            top: 52,
+            height: 36,
+            size: 25,
+            weight: .medium,
+            alignment: .right,
+            x: 345,
+            width: 90
+        )
+        drawText(
+            "\(weather.currentTemperature)°",
+            top: 34,
+            height: 65,
+            size: 50,
+            weight: .bold,
+            alignment: .right,
+            x: 430,
+            width: 130
+        )
+        drawText(
+            "最低 \(weather.lowTemperature)°  最高 \(weather.highTemperature)°",
+            top: 108,
+            height: 28,
+            size: 17,
+            color: .darkGray,
+            alignment: .right,
+            x: 340,
+            width: 220
+        )
     }
 
     private func drawEvents(_ snapshot: DashboardSnapshot) {
@@ -141,7 +191,9 @@ public struct DashboardRenderer {
         size: CGFloat,
         weight: NSFont.Weight = .regular,
         color: NSColor = .black,
-        alignment: NSTextAlignment = .left
+        alignment: NSTextAlignment = .left,
+        x: CGFloat = 40,
+        width: CGFloat = 520
     ) {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = alignment
@@ -151,7 +203,7 @@ public struct DashboardRenderer {
             .foregroundColor: color,
             .paragraphStyle: paragraph
         ]
-        let rect = NSRect(x: 40, y: CGFloat(Self.height) - top - height, width: 520, height: height)
+        let rect = NSRect(x: x, y: CGFloat(Self.height) - top - height, width: width, height: height)
         (text as NSString).draw(in: rect, withAttributes: attributes)
     }
 
