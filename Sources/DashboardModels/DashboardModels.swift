@@ -64,6 +64,7 @@ public struct WeatherSummary: Codable, Equatable, Sendable {
 public struct DashboardSnapshot: Equatable, Sendable {
     public let date: Date
     public let events: [CalendarEvent]
+    public let tomorrowEvents: [CalendarEvent]
     public let reminders: [DashboardReminder]
     public let footer: FooterStatus
     public let weather: WeatherSummary?
@@ -71,12 +72,19 @@ public struct DashboardSnapshot: Equatable, Sendable {
     public init(
         date: Date,
         events: [CalendarEvent],
+        tomorrowEvents: [CalendarEvent] = [],
         reminders: [DashboardReminder],
         footer: FooterStatus,
         weather: WeatherSummary? = nil
     ) {
         self.date = date
         self.events = events.sorted {
+            if $0.isAllDay != $1.isAllDay { return $0.isAllDay }
+            if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
+            if $0.endDate != $1.endDate { return $0.endDate < $1.endDate }
+            return $0.title.localizedStandardCompare($1.title) == .orderedAscending
+        }
+        self.tomorrowEvents = tomorrowEvents.sorted {
             if $0.isAllDay != $1.isAllDay { return $0.isAllDay }
             if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
             if $0.endDate != $1.endDate { return $0.endDate < $1.endDate }

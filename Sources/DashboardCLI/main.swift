@@ -42,12 +42,17 @@ struct DashboardCLI {
             let url = URL(fileURLWithPath: output).standardizedFileURL
             let now = Date()
             let events: [CalendarEvent]
+            let tomorrowEvents: [CalendarEvent]
             switch source {
             case "mock":
                 events = MockData.events(now: now)
+                tomorrowEvents = MockData.tomorrowEvents(now: now)
             case "calendar":
                 let interval = try CalendarDayInterval.containing(now)
-                events = try await EventKitCalendarProvider().events(in: interval)
+                let tomorrowInterval = try CalendarDayInterval.containing(interval.end)
+                let provider = EventKitCalendarProvider()
+                events = try await provider.events(in: interval)
+                tomorrowEvents = try await provider.events(in: tomorrowInterval)
             default:
                 throw CLIError.invalidSource(source)
             }
@@ -68,6 +73,7 @@ struct DashboardCLI {
                 MockData.snapshot(
                     now: now,
                     events: events,
+                    tomorrowEvents: tomorrowEvents,
                     weather: weather,
                     footerMessage: weatherSource == "live" ? "天气 Open-Meteo" : "本地数据"
                 ),
@@ -193,20 +199,27 @@ private enum MockData {
         highTemperature: 33
     )
 
+    static func tomorrowEvents(now: Date = Date()) -> [CalendarEvent] {
+        let calendar = Calendar.current
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+        let start = calendar.date(byAdding: .hour, value: 9, to: tomorrow) ?? tomorrow
+        let end = calendar.date(byAdding: .hour, value: 1, to: start) ?? start
+        return [CalendarEvent(title: "明日会议", startDate: start, endDate: end)]
+    }
+
     static func snapshot(
         now: Date = Date(),
         events: [CalendarEvent]? = nil,
+        tomorrowEvents: [CalendarEvent] = [],
+        reminders: [DashboardReminder] = [],
         weather: WeatherSummary = weather,
         footerMessage: String = "本地数据"
     ) -> DashboardSnapshot {
         DashboardSnapshot(
             date: now,
             events: events ?? self.events(now: now),
-            reminders: [
-                DashboardReminder(title: "整理项目需求"),
-                DashboardReminder(title: "回复重要邮件"),
-                DashboardReminder(title: "阅读 30 分钟")
-            ],
+            tomorrowEvents: tomorrowEvents,
+            reminders: reminders,
             footer: FooterStatus(updatedAt: now, message: footerMessage),
             weather: weather
         )

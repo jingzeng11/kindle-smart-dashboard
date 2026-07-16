@@ -22,13 +22,18 @@ log_message() {
 
 pause_kindle_ui() {
     rm -f "$ui_state_path"
+    paused_processes=""
 
     # On newer 5.x firmware the Java UI is supervised and an init-script stop
     # can be restarted immediately. Suspending cvm keeps the UI from repainting
     # over eips while leaving Wi-Fi and the dashboard worker alive.
     if command -v killall >/dev/null 2>&1 && killall -STOP cvm >/dev/null 2>&1; then
-        printf '%s\n' cvm > "$ui_state_path"
-        log_message "Kindle UI paused with cvm"
+        paused_processes="cvm"
+        if killall -STOP awesome >/dev/null 2>&1; then
+            paused_processes="$paused_processes awesome"
+        fi
+        printf '%s\n' "$paused_processes" > "$ui_state_path"
+        log_message "Kindle UI paused with $paused_processes"
         return 0
     fi
 
@@ -50,15 +55,22 @@ resume_kindle_ui() {
     fi
 
     case "$pause_method" in
-        cvm)
-            command -v killall >/dev/null 2>&1 && killall -CONT cvm >/dev/null 2>&1 || true
+        cvm*)
+            if command -v killall >/dev/null 2>&1; then
+                for process_name in $pause_method; do
+                    killall -CONT "$process_name" >/dev/null 2>&1 || true
+                done
+            fi
             ;;
         framework)
             [ -x /etc/init.d/framework ] && /etc/init.d/framework start >/dev/null 2>&1 || true
             ;;
         *)
             # Also recover safely after an interrupted upgrade or stale state.
-            command -v killall >/dev/null 2>&1 && killall -CONT cvm >/dev/null 2>&1 || true
+            if command -v killall >/dev/null 2>&1; then
+                killall -CONT awesome >/dev/null 2>&1 || true
+                killall -CONT cvm >/dev/null 2>&1 || true
+            fi
             ;;
     esac
 

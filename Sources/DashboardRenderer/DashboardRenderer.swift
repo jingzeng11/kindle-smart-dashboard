@@ -159,15 +159,24 @@ public struct DashboardRenderer {
 
     private func drawReminders(_ snapshot: DashboardSnapshot) {
         let active = snapshot.reminders.filter { !$0.isCompleted }
-        drawText("待办事项", top: 524, height: 34, size: 25, weight: .semibold)
+        drawText("待办事项", top: 524, height: 34, size: 24, weight: .semibold, width: 230)
+        drawText("次日事项", top: 524, height: 34, size: 24, weight: .semibold, x: 320, width: 240)
 
-        if active.isEmpty {
-            drawText("暂无待办", top: 584, height: 34, size: 23, color: Self.mutedInkColor)
-        } else {
-            for (index, reminder) in active.prefix(3).enumerated() {
-                let top = 580 + CGFloat(index * 48)
-                drawText("○  \(reminder.title)", top: top, height: 34, size: 22)
-            }
+        let divider = NSBezierPath()
+        divider.move(to: NSPoint(x: 300, y: CGFloat(Self.height) - 524))
+        divider.line(to: NSPoint(x: 300, y: CGFloat(Self.height) - 714))
+        divider.lineWidth = 1
+        NSColor(deviceWhite: 0.82, alpha: 1).setStroke()
+        divider.stroke()
+
+        for (index, reminder) in active.prefix(3).enumerated() {
+            let top = 580 + CGFloat(index * 48)
+            drawText("○  \(reminder.title)", top: top, height: 34, size: 19, width: 230)
+        }
+
+        for (index, event) in snapshot.tomorrowEvents.prefix(3).enumerated() {
+            let top = 580 + CGFloat(index * 48)
+            drawText("\(listTime(for: event))  \(event.title)", top: top, height: 34, size: 18, x: 320, width: 240)
         }
     }
 
