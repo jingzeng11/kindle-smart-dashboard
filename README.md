@@ -38,10 +38,11 @@ swift run DashboardCLI calendar-status
 请求只读日历所需的完整访问权限：
 
 ```bash
-swift run DashboardCLI calendar-authorize
+./Scripts/build-calendar-authorizer.sh
+open -W ".build/Kindle Smart Dashboard Calendar Access.app" --args calendar-authorize
 ```
 
-日历内容仅在本机处理。当前命令只验证 macOS 权限流程，`render` 仍使用模拟日程。
+macOS 不会为裸 SwiftPM 可执行文件显示 TCC 权限弹窗，因此脚本会把同一个 CLI 二进制封装成无界面的本地签名 App Bundle。日历内容仅在本机处理。当前命令只验证 macOS 权限流程，`render` 仍使用模拟日程。
 
 ## 启动本地服务
 

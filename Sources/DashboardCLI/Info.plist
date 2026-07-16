@@ -4,8 +4,14 @@
 <dict>
     <key>CFBundleIdentifier</key>
     <string>com.jingzeng11.KindleSmartDashboard.CLI</string>
+    <key>CFBundleExecutable</key>
+    <string>DashboardCLI</string>
     <key>CFBundleName</key>
     <string>Kindle Smart Dashboard</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSUIElement</key>
+    <true/>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>Kindle Smart Dashboard 仅在本机读取今天的日历事件，用于生成电子墨水仪表盘图片。日历数据不会上传。</string>
     <key>NSCalendarsUsageDescription</key>

@@ -134,7 +134,7 @@ swift run DashboardCLI calendar-status
 swift run DashboardCLI calendar-authorize
 ```
 
-Because this is a Swift Package Manager command-line executable, first confirm that macOS assigns a stable TCC identity and shows the permission prompt reliably. If a bare executable cannot own the permission reliably, stop and document the result before introducing a minimal signed, non-UI app wrapper. Do not build a GUI speculatively.
+The permission spike confirmed that a bare Swift Package Manager executable remains `notDetermined` and macOS returns `false` without presenting a TCC prompt. V0.2 therefore packages the same `DashboardCLI` binary in a locally signed, non-UI App Bundle solely to establish a stable TCC identity. This wrapper must not add windows, menus, background scheduling, or other GUI behavior.
 
 ## 7. Query Rules
 
