@@ -2,7 +2,7 @@
 
 把越狱 Kindle 8（KT3）变成低功耗的 Apple 风格电子墨水日历显示屏。
 
-V0.1 只验证一条最小链路：模拟日历与天气数据 → macOS 原生 PNG 渲染 → 本地 HTTP 服务。天气目前只用于排版验证，不包含真实接口、定位或自动更新；Kindle 端自动刷新与真实 Apple Calendar 接入也不在本阶段范围内。
+当前已完成 V0.2：模拟或只读 Apple Calendar 日程 → macOS 原生 PNG 渲染 → 本地 HTTP 服务。天气目前只用于排版验证，不包含真实接口、定位或自动更新；Kindle 端自动刷新仍未接入。
 
 ## 环境要求
 
@@ -25,7 +25,14 @@ swift test
 swift run DashboardCLI render --output ./output/dashboard.png
 ```
 
-生成结果为 600 × 800 竖屏 PNG，包含中文模拟日程和待办事项。
+生成结果为 600 × 800 竖屏 PNG，包含中文日程、模拟待办和天气排版数据。
+
+显式选择数据源：
+
+```bash
+swift run DashboardCLI render --source mock --output ./output/dashboard.png
+open -W ".build/Kindle Smart Dashboard Calendar Access.app" --args render --source calendar --output "$PWD/output/dashboard.png"
+```
 
 ## Apple Calendar 权限试验
 
@@ -42,7 +49,7 @@ swift run DashboardCLI calendar-status
 open -W ".build/Kindle Smart Dashboard Calendar Access.app" --args calendar-authorize
 ```
 
-macOS 不会为裸 SwiftPM 可执行文件显示 TCC 权限弹窗，因此脚本会把同一个 CLI 二进制封装成无界面的本地签名 App Bundle。日历内容仅在本机处理。当前命令只验证 macOS 权限流程，`render` 仍使用模拟日程。
+macOS 不会为裸 SwiftPM 可执行文件显示 TCC 权限弹窗，因此脚本会把同一个 CLI 二进制封装成无界面的本地签名 App Bundle。授权后，通过 App Bundle 执行 `render --source calendar` 即可读取当天 Apple Calendar 日程。日历内容仅在本机处理，原始数据不会上传或单独写盘；局域网中能访问 HTTP 接口的设备可以看到 PNG 中已渲染的日程文字。
 
 ## 启动本地服务
 
@@ -66,10 +73,11 @@ curl --output /tmp/dashboard.png http://127.0.0.1:8080/dashboard.png
 ## 项目结构
 
 - `DashboardModels`：日程、待办和快照模型
+- `DashboardCalendar`：Apple Calendar 权限、当天区间和 EventKit 只读查询
 - `DashboardRenderer`：600 × 800 原生 PNG 渲染器
 - `DashboardServer`：小型局域网 HTTP 服务
 - `DashboardCLI`：`render` 与 `serve` 命令
 
 完整的 V0.1 范围与验收标准见 [docs/PROJECT_SPEC.md](docs/PROJECT_SPEC.md)。
 
-下一阶段的只读 Apple Calendar 接入约束与验收标准见 [docs/APPLE_CALENDAR_INTEGRATION.md](docs/APPLE_CALENDAR_INTEGRATION.md)。
+V0.2 的只读 Apple Calendar 接入约束与验收标准见 [docs/APPLE_CALENDAR_INTEGRATION.md](docs/APPLE_CALENDAR_INTEGRATION.md)。

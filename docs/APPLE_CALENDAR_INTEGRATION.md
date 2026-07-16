@@ -1,5 +1,7 @@
 # Apple Calendar Integration Specification
 
+Implementation status: implemented and locally smoke-tested on 2026-07-16. The build and 17 automated tests passed under Xcode 15.2; the signed helper obtained Calendar permission and rendered a real 600 × 800 grayscale PNG. Mock rendering and the HTTP test suite also passed.
+
 ## 1. Purpose
 
 V0.2 replaces the mock calendar events with read-only events from Apple Calendar on macOS while preserving the existing rendering, PNG, CLI, and HTTP behavior.
@@ -22,10 +24,10 @@ The supported development setup for the current Intel Mac is:
 - Xcode 15.2 with Swift 5.9
 - macOS 13 deployment target, with availability handling for macOS 14 APIs
 
-The current machine has a mismatched standalone Command Line Tools installation. Install Xcode 15.2 and select it before implementing V0.2:
+The project uses Xcode 15.2. Select it with:
 
 ```bash
-sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcode-select --switch /Applications/Xcode-15.2.app/Contents/Developer
 sudo xcodebuild -license accept
 ```
 

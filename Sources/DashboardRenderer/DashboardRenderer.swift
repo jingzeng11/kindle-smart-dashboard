@@ -146,7 +146,7 @@ public struct DashboardRenderer {
         drawText("稍后  \(remaining.count) 项", top: 377, height: 25, size: 18, color: .darkGray)
         for (index, event) in remaining.prefix(2).enumerated() {
             let top = 414 + CGFloat(index * 37)
-            drawText("\(timeFormatter.string(from: event.startDate))  \(event.title)", top: top, height: 28, size: 19)
+            drawText("\(listTime(for: event))  \(event.title)", top: top, height: 28, size: 19)
         }
     }
 
@@ -208,11 +208,20 @@ public struct DashboardRenderer {
     }
 
     private func eventDetails(_ event: CalendarEvent) -> String {
-        var value = "\(timeFormatter.string(from: event.startDate))–\(timeFormatter.string(from: event.endDate))"
+        var value: String
+        if event.isAllDay {
+            value = "全天"
+        } else {
+            value = "\(timeFormatter.string(from: event.startDate))–\(timeFormatter.string(from: event.endDate))"
+        }
         if let location = event.location, !location.isEmpty {
             value += "  ·  \(location)"
         }
         return value
+    }
+
+    private func listTime(for event: CalendarEvent) -> String {
+        event.isAllDay ? "全天" : timeFormatter.string(from: event.startDate)
     }
 
     private var dayFormatter: DateFormatter {

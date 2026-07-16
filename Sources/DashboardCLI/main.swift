@@ -36,9 +36,22 @@ struct DashboardCLI {
 
         case "render":
             let output = value(after: "--output", in: arguments) ?? "./output/dashboard.png"
+            let source = value(after: "--source", in: arguments) ?? "mock"
             let url = URL(fileURLWithPath: output).standardizedFileURL
-            try DashboardRenderer().render(MockData.snapshot(), to: url)
+            let now = Date()
+            let events: [CalendarEvent]
+            switch source {
+            case "mock":
+                events = MockData.events(now: now)
+            case "calendar":
+                let interval = try CalendarDayInterval.containing(now)
+                events = try await EventKitCalendarProvider().events(in: interval)
+            default:
+                throw CLIError.invalidSource(source)
+            }
+            try DashboardRenderer().render(MockData.snapshot(now: now, events: events), to: url)
             print("已生成：\(url.path)（600 × 800 PNG）")
+            print("日程来源：\(source)")
 
         case "serve":
             let host = value(after: "--host", in: arguments) ?? "0.0.0.0"
@@ -77,7 +90,8 @@ struct DashboardCLI {
         用法：
           swift run DashboardCLI calendar-status
           swift run DashboardCLI calendar-authorize
-          swift run DashboardCLI render --output ./output/dashboard.png
+          swift run DashboardCLI render --source mock --output ./output/dashboard.png
+          swift run DashboardCLI render --source calendar --output ./output/dashboard.png
           swift run DashboardCLI serve --host 0.0.0.0 --port 8080 [--output ./output/dashboard.png]
         """)
     }
@@ -85,12 +99,15 @@ struct DashboardCLI {
 
 private enum CLIError: Error, LocalizedError {
     case invalidPort(String)
+    case invalidSource(String)
     case unknownCommand(String)
 
     var errorDescription: String? {
         switch self {
         case let .invalidPort(value):
             return "端口必须是 1 到 65535 之间的整数：\(value)"
+        case let .invalidSource(value):
+            return "未知日程来源：\(value)。请使用 mock 或 calendar。"
         case let .unknownCommand(command):
             return "未知命令：\(command)"
         }
@@ -98,7 +115,7 @@ private enum CLIError: Error, LocalizedError {
 }
 
 private enum MockData {
-    static func snapshot(now: Date = Date()) -> DashboardSnapshot {
+    static func events(now: Date = Date()) -> [CalendarEvent] {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: now)
 
@@ -106,13 +123,17 @@ private enum MockData {
             calendar.date(byAdding: .minute, value: hour * 60 + minute, to: startOfDay) ?? now
         }
 
-        return DashboardSnapshot(
+        return [
+            CalendarEvent(title: "产品周会", startDate: date(hour: 10), endDate: date(hour: 11), location: "会议室 A"),
+            CalendarEvent(title: "专注开发 Kindle 日历", startDate: date(hour: 14), endDate: date(hour: 16)),
+            CalendarEvent(title: "晚间散步", startDate: date(hour: 19, minute: 30), endDate: date(hour: 20))
+        ]
+    }
+
+    static func snapshot(now: Date = Date(), events: [CalendarEvent]? = nil) -> DashboardSnapshot {
+        DashboardSnapshot(
             date: now,
-            events: [
-                CalendarEvent(title: "产品周会", startDate: date(hour: 10), endDate: date(hour: 11), location: "会议室 A"),
-                CalendarEvent(title: "专注开发 Kindle 日历", startDate: date(hour: 14), endDate: date(hour: 16)),
-                CalendarEvent(title: "晚间散步", startDate: date(hour: 19, minute: 30), endDate: date(hour: 20))
-            ],
+            events: events ?? self.events(now: now),
             reminders: [
                 DashboardReminder(title: "整理项目需求"),
                 DashboardReminder(title: "回复重要邮件"),

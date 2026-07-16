@@ -5,12 +5,20 @@ public struct CalendarEvent: Equatable, Sendable {
     public let startDate: Date
     public let endDate: Date
     public let location: String?
+    public let isAllDay: Bool
 
-    public init(title: String, startDate: Date, endDate: Date, location: String? = nil) {
+    public init(
+        title: String,
+        startDate: Date,
+        endDate: Date,
+        location: String? = nil,
+        isAllDay: Bool = false
+    ) {
         self.title = title
         self.startDate = startDate
         self.endDate = endDate
         self.location = location
+        self.isAllDay = isAllDay
     }
 }
 
@@ -68,7 +76,12 @@ public struct DashboardSnapshot: Equatable, Sendable {
         weather: WeatherSummary? = nil
     ) {
         self.date = date
-        self.events = events.sorted { $0.startDate < $1.startDate }
+        self.events = events.sorted {
+            if $0.isAllDay != $1.isAllDay { return $0.isAllDay }
+            if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
+            if $0.endDate != $1.endDate { return $0.endDate < $1.endDate }
+            return $0.title.localizedStandardCompare($1.title) == .orderedAscending
+        }
         self.reminders = reminders
         self.footer = footer
         self.weather = weather

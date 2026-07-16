@@ -32,6 +32,24 @@ final class DashboardRendererTests: XCTestCase {
         XCTAssertFalse(try DashboardRenderer().render(snapshot(title: title)).isEmpty)
     }
 
+    func testAllDayEventRendersWithoutCrashing() throws {
+        let now = Date()
+        let event = CalendarEvent(
+            title: "全天会议",
+            startDate: now,
+            endDate: now.addingTimeInterval(86_400),
+            isAllDay: true
+        )
+        let value = DashboardSnapshot(
+            date: now,
+            events: [event],
+            reminders: [],
+            footer: FooterStatus(updatedAt: now)
+        )
+
+        XCTAssertFalse(try DashboardRenderer().render(value).isEmpty)
+    }
+
     private func snapshot(title: String = "中文日程") -> DashboardSnapshot {
         let now = Date()
         return DashboardSnapshot(
