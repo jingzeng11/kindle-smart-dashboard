@@ -27,6 +27,22 @@ swift run DashboardCLI render --output ./output/dashboard.png
 
 生成结果为 600 × 800 竖屏 PNG，包含中文模拟日程和待办事项。
 
+## Apple Calendar 权限试验
+
+查看当前权限状态：
+
+```bash
+swift run DashboardCLI calendar-status
+```
+
+请求只读日历所需的完整访问权限：
+
+```bash
+swift run DashboardCLI calendar-authorize
+```
+
+日历内容仅在本机处理。当前命令只验证 macOS 权限流程，`render` 仍使用模拟日程。
+
 ## 启动本地服务
 
 先生成图片，再启动服务器：

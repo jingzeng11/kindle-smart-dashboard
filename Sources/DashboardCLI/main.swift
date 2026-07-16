@@ -1,3 +1,4 @@
+import DashboardCalendar
 import DashboardModels
 import DashboardRenderer
 import DashboardServer
@@ -5,16 +6,16 @@ import Foundation
 
 @main
 struct DashboardCLI {
-    static func main() {
+    static func main() async {
         do {
-            try run()
+            try await run()
         } catch {
             fputs("错误：\(error.localizedDescription)\n", stderr)
             exit(1)
         }
     }
 
-    private static func run() throws {
+    private static func run() async throws {
         let arguments = Array(CommandLine.arguments.dropFirst())
         guard let command = arguments.first else {
             printUsage()
@@ -22,6 +23,17 @@ struct DashboardCLI {
         }
 
         switch command {
+        case "calendar-status":
+            let state = CalendarAccessController.currentState()
+            print("日历权限：\(state.rawValue)")
+            print(state.userMessage)
+
+        case "calendar-authorize":
+            let controller = CalendarAccessController()
+            let state = try await controller.requestReadAccess()
+            print("日历权限：\(state.rawValue)")
+            print(state.userMessage)
+
         case "render":
             let output = value(after: "--output", in: arguments) ?? "./output/dashboard.png"
             let url = URL(fileURLWithPath: output).standardizedFileURL
@@ -60,9 +72,11 @@ struct DashboardCLI {
 
     private static func printUsage() {
         print("""
-        Kindle Smart Dashboard V0.1
+        Kindle Smart Dashboard
 
         用法：
+          swift run DashboardCLI calendar-status
+          swift run DashboardCLI calendar-authorize
           swift run DashboardCLI render --output ./output/dashboard.png
           swift run DashboardCLI serve --host 0.0.0.0 --port 8080 [--output ./output/dashboard.png]
         """)
