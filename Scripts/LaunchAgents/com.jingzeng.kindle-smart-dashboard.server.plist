@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jingzeng.kindle-smart-dashboard.server</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__BINARY_PATH__</string>
+        <string>serve</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>8080</string>
+        <string>--output</string>
+        <string>__OUTPUT_PATH__</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>StandardOutPath</key>
+    <string>__SERVER_LOG__</string>
+    <key>StandardErrorPath</key>
+    <string>__ERROR_LOG__</string>
+</dict>
+</plist>

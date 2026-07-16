@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jingzeng.kindle-smart-dashboard.refresh</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/open</string>
+        <string>-W</string>
+        <string>--stdout</string>
+        <string>__REFRESH_LOG__</string>
+        <string>--stderr</string>
+        <string>__ERROR_LOG__</string>
+        <string>__APP_PATH__</string>
+        <string>--args</string>
+        <string>render</string>
+        <string>--source</string>
+        <string>calendar</string>
+        <string>--weather</string>
+        <string>live</string>
+        <string>--output</string>
+        <string>__OUTPUT_PATH__</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>3600</integer>
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

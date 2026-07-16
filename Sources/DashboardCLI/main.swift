@@ -90,7 +90,7 @@ struct DashboardCLI {
             print("服务已启动：http://\(host):\(port)")
             print("图片路径：\(imageURL.path)")
             print("按 Control-C 停止。")
-            dispatchMain()
+            await waitForever(keepingAlive: server)
 
         case "help", "--help", "-h":
             printUsage()
@@ -125,6 +125,11 @@ struct DashboardCLI {
             throw CLIError.invalidCoordinate(flag: flag, value: text)
         }
         return value
+    }
+
+    private static func waitForever(keepingAlive server: DashboardHTTPServer) async {
+        defer { server.stop() }
+        await withUnsafeContinuation { (_: UnsafeContinuation<Void, Never>) in }
     }
 
     private static func printUsage() {
