@@ -2,7 +2,7 @@
 
 把越狱 Kindle 8（KT3）变成低功耗的 Apple 风格电子墨水日历显示屏。
 
-当前已完成 V0.4：只读 Apple Calendar 日程 + 成都双流区实时天气 → 每小时自动生成 macOS 原生 PNG → 登录后自动运行的局域网 HTTP 服务。Kindle 端下载与屏幕刷新仍未接入。
+当前已完成 V0.4，并已准备 V0.5 Kindle 客户端：只读 Apple Calendar 日程 + 成都双流区实时天气 → 每小时自动生成 macOS 原生 PNG → 局域网 HTTP 服务 → Kindle 每小时下载并通过 `eips` 刷新。Kindle 客户端还需在实体 KT3 上完成首次安装验收。
 
 ## 环境要求
 
@@ -114,3 +114,5 @@ V0.2 的只读 Apple Calendar 接入约束与验收标准见 [docs/APPLE_CALENDA
 V0.3 的实时天气设计与验收记录见 [docs/WEATHER_INTEGRATION.md](docs/WEATHER_INTEGRATION.md)。天气数据由 [Open-Meteo](https://open-meteo.com/) 提供，采用 [CC BY 4.0](https://open-meteo.com/en/license) 许可；本项目将摄氏温度取整并把 WMO 天气代码转换为简短中文描述。
 
 V0.4 的 macOS 自动刷新和服务安装说明见 [docs/MAC_AUTOMATION.md](docs/MAC_AUTOMATION.md)。
+
+V0.5 Kindle 客户端、KUAL 菜单和首次安装步骤见 [docs/KINDLE_CLIENT.md](docs/KINDLE_CLIENT.md)。

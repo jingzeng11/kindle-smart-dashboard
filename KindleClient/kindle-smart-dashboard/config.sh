@@ -1,0 +1,6 @@
+#!/bin/sh
+
+: "${DASHBOARD_URL:=http://192.168.110.35:8080/dashboard.png}"
+: "${REFRESH_SECONDS:=3600}"
+
+export DASHBOARD_URL REFRESH_SECONDS

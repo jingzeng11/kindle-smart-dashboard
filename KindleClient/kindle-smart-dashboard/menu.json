@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "name": "Smart Dashboard",
+      "items": [
+        {
+          "name": "Start hourly dashboard",
+          "action": "sh ./start.sh"
+        },
+        {
+          "name": "Refresh now",
+          "action": "sh ./refresh.sh"
+        },
+        {
+          "name": "Stop and restore Kindle",
+          "action": "sh ./stop.sh"
+        }
+      ]
+    }
+  ]
+}

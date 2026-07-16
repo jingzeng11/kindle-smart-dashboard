@@ -4,3 +4,5 @@
 .ssh-deploy/
 output/*.png
 !output/.gitkeep
+KindleClient/**/config.local.sh
+KindleClient/**/data/
