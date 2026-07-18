@@ -60,11 +60,12 @@ resume_kindle_ui() {
     # Otherwise X may only redraw damaged regions and leave dashboard fragments
     # mixed with Home or Library.
     if command -v eips >/dev/null 2>&1; then
-        eips -c >/dev/null 2>&1 || true
+        eips -c -f >/dev/null 2>&1 || true
     elif [ -x /usr/sbin/eips ]; then
-        /usr/sbin/eips -c >/dev/null 2>&1 || true
+        /usr/sbin/eips -c -f >/dev/null 2>&1 || true
     fi
 
+    restart_stock_ui=0
     case "$pause_method" in
         cvm*)
             if command -v killall >/dev/null 2>&1; then
@@ -72,6 +73,7 @@ resume_kindle_ui() {
                     killall -CONT "$process_name" >/dev/null 2>&1 || true
                 done
             fi
+            restart_stock_ui=1
             ;;
         framework)
             [ -x /etc/init.d/framework ] && /etc/init.d/framework start >/dev/null 2>&1 || true
@@ -85,9 +87,30 @@ resume_kindle_ui() {
             ;;
     esac
 
-    sleep 1
-    if command -v lipc-set-prop >/dev/null 2>&1; then
+    # X does not know that eips changed its framebuffer, so merely resuming cvm
+    # can leave untouched areas blank. Restart the stock GUI service to force a
+    # complete layout and paint; fall back to reopening Home when unavailable.
+    ui_was_restarted=0
+    if [ "$restart_stock_ui" -eq 1 ] && command -v stop >/dev/null 2>&1 && command -v start >/dev/null 2>&1; then
+        stop lab126_gui >/dev/null 2>&1 || true
+        if start lab126_gui >/dev/null 2>&1; then
+            ui_was_restarted=1
+        fi
+    elif [ "$restart_stock_ui" -eq 1 ] && [ -x /etc/init.d/framework ]; then
+        if /etc/init.d/framework restart >/dev/null 2>&1; then
+            ui_was_restarted=1
+        fi
+    fi
+
+    sleep 3
+    if [ "$ui_was_restarted" -eq 0 ] && command -v lipc-set-prop >/dev/null 2>&1; then
         lipc-set-prop -- com.lab126.appmgrd start app://com.lab126.booklet.home >/dev/null 2>&1 || true
+        sleep 2
+    fi
+    if command -v eips >/dev/null 2>&1; then
+        eips -f '' >/dev/null 2>&1 || true
+    elif [ -x /usr/sbin/eips ]; then
+        /usr/sbin/eips -f '' >/dev/null 2>&1 || true
     fi
 
     rm -f "$ui_state_path"

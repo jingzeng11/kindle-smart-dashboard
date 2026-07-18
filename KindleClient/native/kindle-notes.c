@@ -13,7 +13,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <time.h>
 
 #define SCREEN_WIDTH 600
 #define SCREEN_HEIGHT 800
@@ -21,34 +20,6 @@
 #define WRITING_BOTTOM 700
 #define TOOLBAR_TOP 700
 #define BRUSH_RADIUS 2
-#define WAVEFORM_MODE_DU 2
-#define UPDATE_MODE_PARTIAL 0
-#define TEMP_USE_AMBIENT 0x1000
-#define MXCFB_SEND_UPDATE 0x4040462eUL
-
-struct mxcfb_rect {
-    uint32_t top;
-    uint32_t left;
-    uint32_t width;
-    uint32_t height;
-};
-
-struct mxcfb_alt_buffer_data {
-    uint32_t phys_addr;
-    uint32_t width;
-    uint32_t height;
-    struct mxcfb_rect alt_update_region;
-};
-
-struct mxcfb_update_data {
-    struct mxcfb_rect update_region;
-    uint32_t waveform_mode;
-    uint32_t update_mode;
-    uint32_t update_marker;
-    int32_t temp;
-    uint32_t flags;
-    struct mxcfb_alt_buffer_data alt_buffer_data;
-};
 
 struct note_point {
     uint16_t x;
@@ -136,26 +107,6 @@ static void draw_line(struct framebuffer *fb, int x0, int y0, int x1, int y1) {
     }
 }
 
-static void refresh_region(struct framebuffer *fb, int left, int top, int width, int height) {
-    static uint32_t marker = 1;
-    if (left < 0) { width += left; left = 0; }
-    if (top < 0) { height += top; top = 0; }
-    if (left + width > SCREEN_WIDTH) width = SCREEN_WIDTH - left;
-    if (top + height > SCREEN_HEIGHT) height = SCREEN_HEIGHT - top;
-    if (width <= 0 || height <= 0) return;
-    struct mxcfb_update_data update;
-    memset(&update, 0, sizeof(update));
-    update.update_region.left = (uint32_t)screen_x(fb, left);
-    update.update_region.top = (uint32_t)screen_y(fb, top);
-    update.update_region.width = (uint32_t)screen_x(fb, width);
-    update.update_region.height = (uint32_t)screen_y(fb, height);
-    update.waveform_mode = WAVEFORM_MODE_DU;
-    update.update_mode = UPDATE_MODE_PARTIAL;
-    update.update_marker = marker++;
-    update.temp = TEMP_USE_AMBIENT;
-    ioctl(fb->fd, MXCFB_SEND_UPDATE, &update);
-}
-
 static int append_point(int fd, int x, int y, int starts_stroke) {
     if (fd < 0) return -1;
     struct note_point point = {
@@ -168,30 +119,15 @@ static int append_point(int fd, int x, int y, int starts_stroke) {
     return written == (ssize_t)sizeof(point) ? 0 : -1;
 }
 
-static int64_t monotonic_milliseconds(void) {
-    struct timespec value;
-    if (clock_gettime(CLOCK_MONOTONIC, &value) != 0) return 0;
-    return (int64_t)value.tv_sec * 1000 + value.tv_nsec / 1000000;
-}
-
-static void include_dirty_point(int x, int y, int *left, int *top, int *right, int *bottom) {
-    if (x - 8 < *left) *left = x - 8;
-    if (y - 8 < *top) *top = y - 8;
-    if (x + 8 > *right) *right = x + 8;
-    if (y + 8 > *bottom) *bottom = y + 8;
-}
-
-static void flush_dirty_region(struct framebuffer *fb, int force, int *left, int *top,
-                               int *right, int *bottom, int64_t *last_refresh) {
-    if (*right < *left || *bottom < *top) return;
-    int64_t now = monotonic_milliseconds();
-    if (!force && now - *last_refresh < 180) return;
-    refresh_region(fb, *left, *top, *right - *left + 1, *bottom - *top + 1);
-    *left = SCREEN_WIDTH;
-    *top = SCREEN_HEIGHT;
-    *right = -1;
-    *bottom = -1;
-    *last_refresh = now;
+static int trigger_screen_refresh(void) {
+    pid_t child = fork();
+    if (child < 0) return -1;
+    if (child == 0) {
+        execl("/usr/sbin/eips", "eips", "", (char *)NULL);
+        _exit(127);
+    }
+    int status = 0;
+    return waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
 }
 
 static void redraw_strokes(struct framebuffer *fb, const char *path) {
@@ -211,7 +147,7 @@ static void redraw_strokes(struct framebuffer *fb, const char *path) {
         have_previous = 1;
     }
     close(fd);
-    refresh_region(fb, 0, WRITING_TOP, SCREEN_WIDTH, WRITING_BOTTOM - WRITING_TOP);
+    trigger_screen_refresh();
 }
 
 static int show_base_image(const char *image_path) {
@@ -277,8 +213,6 @@ static int watch_touch(const char *device_path, const char *image_path,
 
     int touching = 0, drawing = 0, stroke_started = 0;
     int x = 0, y = 0, start_x = 0, start_y = 0, previous_x = 0, previous_y = 0;
-    int dirty_left = SCREEN_WIDTH, dirty_top = SCREEN_HEIGHT, dirty_right = -1, dirty_bottom = -1;
-    int64_t last_refresh = monotonic_milliseconds();
     struct input_event event;
 
     while (read(input_fd, &event, sizeof(event)) == (ssize_t)sizeof(event)) {
@@ -291,18 +225,20 @@ static int watch_touch(const char *device_path, const char *image_path,
                 stroke_started = 0;
             } else {
                 if (drawing) {
-                    flush_dirty_region(&fb, 1, &dirty_left, &dirty_top, &dirty_right, &dirty_bottom, &last_refresh);
-                    fsync(notes_fd);
+                    trigger_screen_refresh();
                 }
                 if (touching && !drawing) {
                     int action = toolbar_action(start_x, start_y);
                     if (action == 1) {
+                        fsync(notes_fd);
                         undo_last_stroke(notes_path);
                         restore_and_redraw(&fb, image_path, notes_path);
                     } else if (action == 2) {
+                        fsync(notes_fd);
                         clear_strokes(notes_path);
                         restore_and_redraw(&fb, image_path, notes_path);
                     } else if (action == 3) {
+                        fsync(notes_fd);
                         kill(dashboard_pid, SIGTERM);
                         break;
                     }
@@ -330,11 +266,8 @@ static int watch_touch(const char *device_path, const char *image_path,
                     append_point(notes_fd, x, y, 0);
                     draw_line(&fb, previous_x, previous_y, x, y);
                 }
-                include_dirty_point(previous_x, previous_y, &dirty_left, &dirty_top, &dirty_right, &dirty_bottom);
-                include_dirty_point(x, y, &dirty_left, &dirty_top, &dirty_right, &dirty_bottom);
                 previous_x = x;
                 previous_y = y;
-                flush_dirty_region(&fb, 0, &dirty_left, &dirty_top, &dirty_right, &dirty_bottom, &last_refresh);
             }
         }
     }
