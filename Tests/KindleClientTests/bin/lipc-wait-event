@@ -1,0 +1,3 @@
+#!/bin/sh
+
+printf '%s\n' 'com.lab126.powerd goingToScreenSaver 2'

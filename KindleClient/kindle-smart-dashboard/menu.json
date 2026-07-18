@@ -14,6 +14,10 @@
         {
           "name": "Stop and restore Kindle",
           "action": "sh ./stop.sh"
+        },
+        {
+          "name": "Touch setup - draw for 15 seconds",
+          "action": "sh ./touch-diagnostics.sh"
         }
       ]
     }

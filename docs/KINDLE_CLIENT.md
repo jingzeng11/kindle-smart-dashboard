@@ -13,11 +13,14 @@ Target device:
 
 ## Behavior
 
-The KUAL extension provides three actions:
+The KUAL extension provides four actions:
 
 - **Start hourly dashboard**: keeps Wi-Fi available, stops the Amazon framework, downloads immediately, then refreshes every 3600 seconds;
 - **Refresh now**: performs one download and display attempt;
 - **Stop and restore Kindle**: stops the loop, restores the framework, and re-enables the normal screensaver behavior.
+- **Touch setup - draw for 15 seconds**: records a bounded local evdev sample used to calibrate handwriting coordinates on the physical KT3.
+
+While dashboard mode is active, a short press of the power button exits the loop, cancels the pending suspend, and restores the stock Kindle interface. A long reboot is no longer required.
 
 Each refresh reads the Kindle battery level from `com.lab126.powerd`, appends it to the image request, and lets the Mac service draw a compact battery icon and percentage in the upper-right corner. It then downloads to a temporary file, verifies the PNG signature, atomically replaces the saved image, clears the screen, and displays it with Kindle's built-in `eips`. A failed or invalid download leaves the current screen unchanged.
 

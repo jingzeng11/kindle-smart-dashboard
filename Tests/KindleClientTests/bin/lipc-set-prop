@@ -1,0 +1,5 @@
+#!/bin/sh
+
+if [ -n "${FAKE_LIPC_LOG:-}" ]; then
+    printf '%s\n' "$*" >> "$FAKE_LIPC_LOG"
+fi
