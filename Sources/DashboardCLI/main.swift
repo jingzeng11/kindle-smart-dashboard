@@ -17,7 +17,7 @@ struct DashboardCLI {
     }
 
     private static func run() async throws {
-        let arguments = Array(CommandLine.arguments.dropFirst())
+        let arguments = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-psn_") }
         guard let command = arguments.first else {
             printUsage()
             return
@@ -35,6 +35,17 @@ struct DashboardCLI {
             print("日历权限：\(state.rawValue)")
             print(state.userMessage)
 
+        case "reminder-status":
+            let state = ReminderAccessController.currentState()
+            print("提醒事项权限：\(state.rawValue)")
+            print(state.userMessage)
+
+        case "reminder-authorize":
+            let controller = ReminderAccessController()
+            let state = try await controller.requestReadAccess()
+            print("提醒事项权限：\(state.rawValue)")
+            print(state.userMessage)
+
         case "render":
             let output = value(after: "--output", in: arguments) ?? "./output/dashboard.png"
             let source = value(after: "--source", in: arguments) ?? "mock"
@@ -43,16 +54,19 @@ struct DashboardCLI {
             let now = Date()
             let events: [CalendarEvent]
             let tomorrowEvents: [CalendarEvent]
+            let reminders: [DashboardReminder]
             switch source {
             case "mock":
                 events = MockData.events(now: now)
                 tomorrowEvents = MockData.tomorrowEvents(now: now)
+                reminders = []
             case "calendar":
                 let interval = try CalendarDayInterval.containing(now)
                 let tomorrowInterval = try CalendarDayInterval.containing(interval.end)
                 let provider = EventKitCalendarProvider()
                 events = try await provider.events(in: interval)
                 tomorrowEvents = try await provider.events(in: tomorrowInterval)
+                reminders = try await EventKitReminderProvider().incompleteReminders()
             default:
                 throw CLIError.invalidSource(source)
             }
@@ -74,6 +88,7 @@ struct DashboardCLI {
                     now: now,
                     events: events,
                     tomorrowEvents: tomorrowEvents,
+                    reminders: reminders,
                     weather: weather,
                     footerMessage: weatherSource == "live" ? "天气 Open-Meteo" : "本地数据"
                 ),
@@ -145,6 +160,8 @@ struct DashboardCLI {
         用法：
           swift run DashboardCLI calendar-status
           swift run DashboardCLI calendar-authorize
+          swift run DashboardCLI reminder-status
+          swift run DashboardCLI reminder-authorize
           swift run DashboardCLI render --source mock --weather mock --output ./output/dashboard.png
           swift run DashboardCLI render --source calendar --weather live --output ./output/dashboard.png
             [--latitude 30.58 --longitude 103.92]

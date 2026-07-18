@@ -20,6 +20,31 @@ refresh_plist="$agents_dir/$refresh_label.plist"
 server_plist="$agents_dir/$server_label.plist"
 domain="gui/$UID"
 
+run_app_command() {
+    local command="$1"
+    local expected_pattern="$2"
+    shift 2
+
+    : > "$refresh_log"
+    : > "$error_log"
+    /usr/bin/open -n --stdout "$refresh_log" --stderr "$error_log" "$app_path" --args "$command" "$@"
+
+    local attempt
+    for attempt in {1..120}; do
+        if grep -Eq "$expected_pattern" "$refresh_log"; then
+            return 0
+        fi
+        if [[ -s "$error_log" ]]; then
+            cat "$error_log" >&2
+            return 1
+        fi
+        sleep 1
+    done
+
+    echo "等待 $command 权限结果超时。" >&2
+    return 1
+}
+
 mkdir -p "$install_root" "$data_dir" "$log_dir" "$agents_dir"
 touch "$refresh_log" "$server_log" "$error_log"
 
@@ -47,14 +72,11 @@ plutil -replace StandardErrorPath -string "$error_log" "$server_plist"
 plutil -lint "$refresh_plist" "$server_plist"
 codesign --verify --deep --strict "$app_path"
 
-: > "$refresh_log"
-: > "$error_log"
-/usr/bin/open -W --stdout "$refresh_log" --stderr "$error_log" "$app_path" --args calendar-authorize
-grep -q "authorized" "$refresh_log"
+run_app_command calendar-authorize "authorized|fullAccess"
+run_app_command reminder-authorize "authorized|fullAccess"
 
-: > "$refresh_log"
-/usr/bin/open -W --stdout "$refresh_log" --stderr "$error_log" "$app_path" --args \
-    render --source calendar --weather live --output "$output_path"
+run_app_command render "已生成：" \
+    --source calendar --weather live --output "$output_path"
 test -s "$output_path"
 
 launchctl bootstrap "$domain" "$server_plist"

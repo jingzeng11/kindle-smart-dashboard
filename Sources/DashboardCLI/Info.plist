@@ -14,7 +14,11 @@
     <true/>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>Kindle Smart Dashboard 仅在本机读取今天的日历事件，用于生成电子墨水仪表盘图片。日历数据不会上传。</string>
-    <key>NSCalendarsUsageDescription</key>
-    <string>Kindle Smart Dashboard 仅在本机读取今天的日历事件，用于生成电子墨水仪表盘图片。日历数据不会上传。</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Kindle Smart Dashboard 仅在本机读取今天的日历事件，用于生成电子墨水仪表盘图片。日历数据不会上传。</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Kindle Smart Dashboard 仅在本机读取未完成的提醒事项，用于生成电子墨水仪表盘图片。提醒事项数据不会上传。</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Kindle Smart Dashboard 仅在本机读取未完成的提醒事项，用于生成电子墨水仪表盘图片。提醒事项数据不会上传。</string>
 </dict>
 </plist>
