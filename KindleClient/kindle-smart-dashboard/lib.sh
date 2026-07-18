@@ -1,6 +1,6 @@
 #!/bin/sh
 
-extension_root=$(CDPATH= cd "$(dirname "$0")" && pwd)
+extension_root=${DASHBOARD_EXTENSION_ROOT:-$(CDPATH= cd "$(dirname "$0")" && pwd)}
 
 . "$extension_root/config.sh"
 if [ -f "$extension_root/config.local.sh" ]; then
@@ -15,11 +15,43 @@ ui_state_path="$data_dir/ui.state"
 log_path=${DASHBOARD_LOG_FILE:-"$data_dir/dashboard.log"}
 notes_path=${DASHBOARD_NOTES_FILE:-"$data_dir/handwriting.bin"}
 notes_bin="$extension_root/bin/kindle-notes"
+stock_framebuffer_path="$data_dir/stock-framebuffer.bin"
+stock_framebuffer_temporary_path="$data_dir/stock-framebuffer.download"
+framebuffer_device=${DASHBOARD_FRAMEBUFFER_DEVICE:-/dev/fb0}
 
 mkdir -p "$data_dir"
 
 log_message() {
     printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$log_path"
+}
+
+capture_stock_framebuffer() {
+    rm -f "$stock_framebuffer_temporary_path"
+    if [ -r "$framebuffer_device" ] && \
+       dd if="$framebuffer_device" of="$stock_framebuffer_temporary_path" bs=4096 2>/dev/null && \
+       [ -s "$stock_framebuffer_temporary_path" ]; then
+        mv "$stock_framebuffer_temporary_path" "$stock_framebuffer_path"
+        log_message "Stock framebuffer captured"
+        return 0
+    fi
+    rm -f "$stock_framebuffer_temporary_path"
+    log_message "Stock framebuffer capture unavailable"
+    return 1
+}
+
+restore_stock_framebuffer() {
+    [ -s "$stock_framebuffer_path" ] || return 1
+    [ -w "$framebuffer_device" ] || return 1
+    dd if="$stock_framebuffer_path" of="$framebuffer_device" bs=4096 2>/dev/null || return 1
+    if command -v eips >/dev/null 2>&1; then
+        eips '' >/dev/null 2>&1 || return 1
+    elif [ -x /usr/sbin/eips ]; then
+        /usr/sbin/eips '' >/dev/null 2>&1 || return 1
+    else
+        return 1
+    fi
+    log_message "Stock framebuffer restored"
+    return 0
 }
 
 pause_kindle_ui() {
@@ -35,6 +67,7 @@ pause_kindle_ui() {
             paused_processes="$paused_processes awesome"
         fi
         printf '%s\n' "$paused_processes" > "$ui_state_path"
+        capture_stock_framebuffer || true
         log_message "Kindle UI paused with $paused_processes"
         return 0
     fi
@@ -42,6 +75,7 @@ pause_kindle_ui() {
     if [ -x /etc/init.d/framework ]; then
         /etc/init.d/framework stop >/dev/null 2>&1 || return 1
         printf '%s\n' framework > "$ui_state_path"
+        capture_stock_framebuffer || true
         log_message "Kindle UI paused with framework"
         return 0
     fi
@@ -56,16 +90,11 @@ resume_kindle_ui() {
         pause_method=$(sed -n '1p' "$ui_state_path")
     fi
 
-    # Remove the dashboard framebuffer before the stock UI starts repainting.
-    # Otherwise X may only redraw damaged regions and leave dashboard fragments
-    # mixed with Home or Library.
-    if command -v eips >/dev/null 2>&1; then
-        eips -c -f >/dev/null 2>&1 || true
-    elif [ -x /usr/sbin/eips ]; then
-        /usr/sbin/eips -c -f >/dev/null 2>&1 || true
+    framebuffer_was_restored=0
+    if restore_stock_framebuffer; then
+        framebuffer_was_restored=1
     fi
 
-    restart_stock_ui=0
     case "$pause_method" in
         cvm*)
             if command -v killall >/dev/null 2>&1; then
@@ -73,7 +102,6 @@ resume_kindle_ui() {
                     killall -CONT "$process_name" >/dev/null 2>&1 || true
                 done
             fi
-            restart_stock_ui=1
             ;;
         framework)
             [ -x /etc/init.d/framework ] && /etc/init.d/framework start >/dev/null 2>&1 || true
@@ -87,32 +115,15 @@ resume_kindle_ui() {
             ;;
     esac
 
-    # X does not know that eips changed its framebuffer, so merely resuming cvm
-    # can leave untouched areas blank. Restart the stock GUI service to force a
-    # complete layout and paint; fall back to reopening Home when unavailable.
-    ui_was_restarted=0
-    if [ "$restart_stock_ui" -eq 1 ] && command -v stop >/dev/null 2>&1 && command -v start >/dev/null 2>&1; then
-        stop lab126_gui >/dev/null 2>&1 || true
-        if start lab126_gui >/dev/null 2>&1; then
-            ui_was_restarted=1
-        fi
-    elif [ "$restart_stock_ui" -eq 1 ] && [ -x /etc/init.d/framework ]; then
-        if /etc/init.d/framework restart >/dev/null 2>&1; then
-            ui_was_restarted=1
-        fi
-    fi
-
-    sleep 3
-    if [ "$ui_was_restarted" -eq 0 ] && command -v lipc-set-prop >/dev/null 2>&1; then
+    # The captured framebuffer is the clean Home screen shown after KUAL closes
+    # and before eips draws the dashboard. Restoring those exact pixels avoids
+    # relying on X damage tracking and does not restart services used by KUAL.
+    if [ "$framebuffer_was_restored" -eq 0 ] && command -v lipc-set-prop >/dev/null 2>&1; then
         lipc-set-prop -- com.lab126.appmgrd start app://com.lab126.booklet.home >/dev/null 2>&1 || true
-        sleep 2
-    fi
-    if command -v eips >/dev/null 2>&1; then
-        eips -f '' >/dev/null 2>&1 || true
-    elif [ -x /usr/sbin/eips ]; then
-        /usr/sbin/eips -f '' >/dev/null 2>&1 || true
+        log_message "Framebuffer snapshot unavailable; requested stock Home"
     fi
 
+    rm -f "$stock_framebuffer_path" "$stock_framebuffer_temporary_path"
     rm -f "$ui_state_path"
 }
 
