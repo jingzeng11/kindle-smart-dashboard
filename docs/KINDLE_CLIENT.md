@@ -22,6 +22,8 @@ The KUAL extension provides four actions:
 
 While dashboard mode is active, a short press of the power button exits the loop, cancels the pending suspend, and restores the stock Kindle interface. A long reboot is no longer required.
 
+The physical KT3 calibration identifies `/dev/input/event0` (`zforce2`) with direct 600 × 800 coordinates. The dashboard footer exposes five local touch controls: **手写**, **撤销**, **清空**, **完成**, and **阅读**. Strokes are stored only in `data/handwriting.bin`, are redrawn after every network refresh, and are preserved by both USB and SSH client upgrades. **阅读** exits dashboard mode and restores the stock interface; handwriting is never uploaded or converted into Apple Calendar data.
+
 Each refresh reads the Kindle battery level from `com.lab126.powerd`, appends it to the image request, and lets the Mac service draw a compact battery icon and percentage in the upper-right corner. It then downloads to a temporary file, verifies the PNG signature, atomically replaces the saved image, clears the screen, and displays it with Kindle's built-in `eips`. A failed or invalid download leaves the current screen unchanged.
 
 The client uses `curl` when available and otherwise uses `wget`. It stores only the latest PNG, PID, and a local log under its extension directory.

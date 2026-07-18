@@ -8,6 +8,7 @@ extension_root=$(CDPATH= cd "$(dirname "$0")" && pwd)
 cleanup_done=0
 sleeper_pid=""
 power_watcher_pid=""
+notes_watcher_pid=""
 
 restore_kindle() {
     [ "$cleanup_done" -eq 0 ] || return 0
@@ -18,6 +19,9 @@ restore_kindle() {
     fi
     if [ -n "$power_watcher_pid" ]; then
         kill "$power_watcher_pid" 2>/dev/null || true
+    fi
+    if [ -n "$notes_watcher_pid" ]; then
+        kill "$notes_watcher_pid" 2>/dev/null || true
     fi
     rm -f "$pid_path"
     if command -v lipc-set-prop >/dev/null 2>&1; then
@@ -45,6 +49,14 @@ pause_kindle_ui || true
 if command -v lipc-wait-event >/dev/null 2>&1; then
     "$extension_root/watch-power-exit.sh" "$$" >> "$log_path" 2>&1 &
     power_watcher_pid=$!
+fi
+
+if [ -x "$notes_bin" ] && [ -r "$TOUCH_DEVICE" ]; then
+    "$notes_bin" watch "$TOUCH_DEVICE" "$image_path" "$notes_path" "$$" >> "$log_path" 2>&1 &
+    notes_watcher_pid=$!
+    log_message "Local handwriting enabled on $TOUCH_DEVICE"
+else
+    log_message "Local handwriting unavailable"
 fi
 
 log_message "Dashboard mode started; refresh interval ${REFRESH_SECONDS}s"

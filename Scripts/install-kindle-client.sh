@@ -41,12 +41,12 @@ ssh "${ssh_options[@]}" "$target" \
     '(command -v eips >/dev/null 2>&1 || test -x /usr/sbin/eips) && (command -v wget >/dev/null 2>&1 || command -v curl >/dev/null 2>&1) && test -d /mnt/us/extensions'
 
 ssh "${ssh_options[@]}" "$target" \
-    "if test -x '$remote_dir/stop.sh'; then '$remote_dir/stop.sh'; fi; rm -rf '$remote_dir'"
+    "if test -s '$remote_dir/data/handwriting.bin'; then cp '$remote_dir/data/handwriting.bin' /tmp/kindle-handwriting.bin; fi; if test -x '$remote_dir/stop.sh'; then '$remote_dir/stop.sh'; fi; rm -rf '$remote_dir'"
 scp "${scp_options[@]}" -r "$client_dir" "$target:/mnt/us/extensions/"
 printf '%s\n' "DASHBOARD_URL='$dashboard_url'" | \
     ssh "${ssh_options[@]}" "$target" "tee '$remote_dir/config.local.sh' >/dev/null"
 ssh "${ssh_options[@]}" "$target" \
-    "chmod 755 '$remote_dir'/*.sh && '$remote_dir/start.sh'"
+    "chmod 755 '$remote_dir'/*.sh '$remote_dir'/bin/*; if test -s /tmp/kindle-handwriting.bin; then mkdir -p '$remote_dir/data'; mv /tmp/kindle-handwriting.bin '$remote_dir/data/handwriting.bin'; fi; '$remote_dir/start.sh'"
 
 echo "Kindle 客户端已安装并启动。"
 echo "设备：$kindle_ip"

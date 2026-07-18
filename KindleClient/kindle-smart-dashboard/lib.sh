@@ -13,6 +13,8 @@ temporary_path="$data_dir/dashboard.download"
 pid_path="$data_dir/dashboard.pid"
 ui_state_path="$data_dir/ui.state"
 log_path=${DASHBOARD_LOG_FILE:-"$data_dir/dashboard.log"}
+notes_path=${DASHBOARD_NOTES_FILE:-"$data_dir/handwriting.bin"}
+notes_bin="$extension_root/bin/kindle-notes"
 
 mkdir -p "$data_dir"
 
@@ -153,6 +155,10 @@ display_dashboard() {
     }
     "$eips_bin" -c
     "$eips_bin" -g "$image_path"
+    if [ -x "$notes_bin" ]; then
+        "$notes_bin" redraw "$notes_path" >> "$log_path" 2>&1 || \
+            log_message "Handwriting redraw failed"
+    fi
 }
 
 refresh_dashboard() {

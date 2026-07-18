@@ -28,10 +28,20 @@ fi
 
 curl --fail --silent --show-error "${dashboard_url%/dashboard.png}/health" >/dev/null
 
+notes_backup=$(mktemp /tmp/kindle-handwriting.XXXXXX)
+trap 'rm -f "$notes_backup"' EXIT
+if [[ -s "$target_dir/data/handwriting.bin" ]]; then
+    cp "$target_dir/data/handwriting.bin" "$notes_backup"
+fi
+
 rm -rf "$target_dir"
 mkdir -p "$target_dir"
 cp -R "$client_dir/." "$target_dir/"
 printf '%s\n' "DASHBOARD_URL='$dashboard_url'" > "$target_dir/config.local.sh"
+if [[ -s "$notes_backup" ]]; then
+    mkdir -p "$target_dir/data"
+    cp "$notes_backup" "$target_dir/data/handwriting.bin"
+fi
 
 echo "Kindle 客户端已复制到：$target_dir"
 echo "安全弹出 Kindle 后，在 KUAL 中选择 Smart Dashboard > Start hourly dashboard。"

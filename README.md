@@ -2,7 +2,7 @@
 
 把越狱 Kindle 8（KT3）变成低功耗的 Apple 风格电子墨水日历显示屏。
 
-当前已完成 Apple Calendar、Apple 提醒事项、成都双流区实时天气、macOS 每小时自动生成、局域网 HTTP 服务和 KT3 Kindle 客户端。Kindle 每小时读取自身电量、下载带电量标识的 600 × 800 PNG，并通过 `eips` 刷新电子墨水屏。
+当前已完成 Apple Calendar、Apple 提醒事项、成都双流区实时天气、macOS 每小时自动生成、局域网 HTTP 服务和 KT3 Kindle 客户端。Kindle 每小时读取自身电量、下载带电量标识的 600 × 800 PNG，并通过 `eips` 刷新电子墨水屏。KT3 客户端还支持设备本地手写、撤销、清空、刷新后重绘，以及通过屏幕“阅读”按钮或短按电源键恢复原生阅读界面；笔迹不会上传或写入 Apple Calendar。
 
 ## 环境要求
 

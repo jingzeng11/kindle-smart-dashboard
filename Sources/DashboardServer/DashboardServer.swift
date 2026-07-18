@@ -57,9 +57,7 @@ public struct DashboardRouter {
                     .value
                     .flatMap(Int.init)
                     .flatMap { (0...100).contains($0) ? $0 : nil }
-                let body = batteryLevel
-                    .flatMap { BatteryOverlay.render(level: $0, onto: data) }
-                    ?? data
+                let body = DashboardOverlay.render(batteryLevel: batteryLevel, onto: data) ?? data
                 return HTTPResponse(statusCode: 200, reason: "OK", contentType: "image/png", body: body)
             } catch {
                 return textResponse(404, "Not Found", "仪表盘图片尚未生成。请先运行 render 命令。\n")
@@ -79,8 +77,8 @@ public struct DashboardRouter {
     }
 }
 
-enum BatteryOverlay {
-    static func render(level: Int, onto pngData: Data) -> Data? {
+enum DashboardOverlay {
+    static func render(batteryLevel: Int?, onto pngData: Data) -> Data? {
         guard let bitmap = NSBitmapImageRep(data: pngData),
               let context = NSGraphicsContext(bitmapImageRep: bitmap) else {
             return nil
@@ -91,34 +89,63 @@ enum BatteryOverlay {
         NSGraphicsContext.current = context
         defer { NSGraphicsContext.restoreGraphicsState() }
 
-        let background = NSRect(x: 478, y: height - 32, width: 82, height: 24)
         NSColor.white.setFill()
-        background.fill()
+        if let level = batteryLevel {
+            NSRect(x: 478, y: height - 32, width: 82, height: 24).fill()
 
-        let batteryFrame = NSRect(x: 484, y: height - 24, width: 20, height: 11)
-        let outline = NSBezierPath(roundedRect: batteryFrame, xRadius: 2, yRadius: 2)
-        outline.lineWidth = 1.5
-        NSColor.black.setStroke()
-        outline.stroke()
-        NSRect(x: 504, y: height - 21, width: 2, height: 5).fill()
+            let batteryFrame = NSRect(x: 484, y: height - 24, width: 20, height: 11)
+            let outline = NSBezierPath(roundedRect: batteryFrame, xRadius: 2, yRadius: 2)
+            outline.lineWidth = 1.5
+            NSColor.black.setStroke()
+            outline.stroke()
+            NSRect(x: 504, y: height - 21, width: 2, height: 5).fill()
 
-        let fillWidth = max(0, 16 * CGFloat(level) / 100)
-        NSRect(x: 486, y: height - 22, width: fillWidth, height: 7).fill()
+            let fillWidth = max(0, 16 * CGFloat(level) / 100)
+            NSRect(x: 486, y: height - 22, width: fillWidth, height: 7).fill()
 
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .right
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 14, weight: .semibold),
-            .foregroundColor: NSColor.black,
-            .paragraphStyle: paragraph
-        ]
-        ("\(level)%" as NSString).draw(
-            in: NSRect(x: 508, y: height - 29, width: 52, height: 20),
-            withAttributes: attributes
-        )
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .right
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 14, weight: .semibold),
+                .foregroundColor: NSColor.black,
+                .paragraphStyle: paragraph
+            ]
+            ("\(level)%" as NSString).draw(
+                in: NSRect(x: 508, y: height - 29, width: 52, height: 20),
+                withAttributes: attributes
+            )
+        }
+
+        drawTouchControls(height: height)
 
         context.flushGraphics()
         return bitmap.representation(using: .png, properties: [:])
+    }
+
+    private static func drawTouchControls(height: CGFloat) {
+        let labels = ["手写", "撤销", "清空", "完成", "阅读"]
+        let positions: [CGFloat] = [40, 148, 256, 364, 472]
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 15, weight: .medium),
+            .foregroundColor: NSColor.black,
+            .paragraphStyle: paragraph
+        ]
+
+        NSColor.white.setFill()
+        NSRect(x: 35, y: height - 748, width: 530, height: 42).fill()
+        NSColor.black.setStroke()
+        for (label, x) in zip(labels, positions) {
+            let rect = NSRect(x: x, y: height - 744, width: 88, height: 34)
+            let outline = NSBezierPath(roundedRect: rect, xRadius: 5, yRadius: 5)
+            outline.lineWidth = 1
+            outline.stroke()
+            (label as NSString).draw(
+                in: NSRect(x: x, y: height - 739, width: 88, height: 22),
+                withAttributes: attributes
+            )
+        }
     }
 }
 
