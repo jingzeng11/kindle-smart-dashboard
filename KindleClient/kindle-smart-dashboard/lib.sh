@@ -87,12 +87,43 @@ find_eips() {
     fi
 }
 
+read_battery_level() {
+    battery_level=""
+    if command -v lipc-get-prop >/dev/null 2>&1; then
+        battery_level=$(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null || true)
+    elif command -v gasgauge-info >/dev/null 2>&1; then
+        battery_level=$(gasgauge-info -c 2>/dev/null || true)
+    fi
+
+    battery_level=$(printf '%s' "$battery_level" | tr -cd '0-9')
+    [ -n "$battery_level" ] || return 1
+    battery_level=$(printf '%s' "$battery_level" | sed 's/^0*//')
+    [ -n "$battery_level" ] || battery_level=0
+    if [ "$battery_level" -ge 0 ] 2>/dev/null && [ "$battery_level" -le 100 ] 2>/dev/null; then
+        printf '%s\n' "$battery_level"
+        return 0
+    fi
+    return 1
+}
+
+dashboard_download_url() {
+    battery_level=$(read_battery_level) || {
+        printf '%s\n' "$DASHBOARD_URL"
+        return 0
+    }
+    case "$DASHBOARD_URL" in
+        *\?*) printf '%s&battery=%s\n' "$DASHBOARD_URL" "$battery_level" ;;
+        *) printf '%s?battery=%s\n' "$DASHBOARD_URL" "$battery_level" ;;
+    esac
+}
+
 download_dashboard() {
     rm -f "$temporary_path"
+    download_url=$(dashboard_download_url)
     if command -v curl >/dev/null 2>&1; then
-        curl -fsS --connect-timeout 15 --max-time 60 -o "$temporary_path" "$DASHBOARD_URL"
+        curl -fsS --connect-timeout 15 --max-time 60 -o "$temporary_path" "$download_url"
     elif command -v wget >/dev/null 2>&1; then
-        wget -q -T 60 -O "$temporary_path" "$DASHBOARD_URL"
+        wget -q -T 60 -O "$temporary_path" "$download_url"
     else
         log_message "Neither curl nor wget is available"
         return 1

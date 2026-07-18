@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Network
 
@@ -42,13 +43,24 @@ public struct DashboardRouter {
             return textResponse(405, "Method Not Allowed", "仅支持 GET 请求。\n")
         }
 
-        switch path {
+        let components = URLComponents(string: "http://localhost\(path)")
+        let requestPath = components?.path ?? path
+
+        switch requestPath {
         case "/health":
             return textResponse(200, "OK", "ok\n")
         case "/dashboard.png":
             do {
                 let data = try Data(contentsOf: imageURL)
-                return HTTPResponse(statusCode: 200, reason: "OK", contentType: "image/png", body: data)
+                let batteryLevel = components?.queryItems?
+                    .first(where: { $0.name == "battery" })?
+                    .value
+                    .flatMap(Int.init)
+                    .flatMap { (0...100).contains($0) ? $0 : nil }
+                let body = batteryLevel
+                    .flatMap { BatteryOverlay.render(level: $0, onto: data) }
+                    ?? data
+                return HTTPResponse(statusCode: 200, reason: "OK", contentType: "image/png", body: body)
             } catch {
                 return textResponse(404, "Not Found", "仪表盘图片尚未生成。请先运行 render 命令。\n")
             }
@@ -64,6 +76,49 @@ public struct DashboardRouter {
             contentType: "text/plain; charset=utf-8",
             body: Data(text.utf8)
         )
+    }
+}
+
+enum BatteryOverlay {
+    static func render(level: Int, onto pngData: Data) -> Data? {
+        guard let bitmap = NSBitmapImageRep(data: pngData),
+              let context = NSGraphicsContext(bitmapImageRep: bitmap) else {
+            return nil
+        }
+
+        let height = CGFloat(bitmap.pixelsHigh)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        defer { NSGraphicsContext.restoreGraphicsState() }
+
+        let background = NSRect(x: 478, y: height - 32, width: 82, height: 24)
+        NSColor.white.setFill()
+        background.fill()
+
+        let batteryFrame = NSRect(x: 484, y: height - 24, width: 20, height: 11)
+        let outline = NSBezierPath(roundedRect: batteryFrame, xRadius: 2, yRadius: 2)
+        outline.lineWidth = 1.5
+        NSColor.black.setStroke()
+        outline.stroke()
+        NSRect(x: 504, y: height - 21, width: 2, height: 5).fill()
+
+        let fillWidth = max(0, 16 * CGFloat(level) / 100)
+        NSRect(x: 486, y: height - 22, width: fillWidth, height: 7).fill()
+
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .right
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 14, weight: .semibold),
+            .foregroundColor: NSColor.black,
+            .paragraphStyle: paragraph
+        ]
+        ("\(level)%" as NSString).draw(
+            in: NSRect(x: 508, y: height - 29, width: 52, height: 20),
+            withAttributes: attributes
+        )
+
+        context.flushGraphics()
+        return bitmap.representation(using: .png, properties: [:])
     }
 }
 

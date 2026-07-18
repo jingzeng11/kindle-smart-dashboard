@@ -2,7 +2,7 @@
 
 ## Status
 
-V0.5 is implemented and locally simulated, but final acceptance requires the physical KT3. The current network scan did not find an open Kindle SSH service.
+V0.5 has been installed and accepted on the physical KT3 over USB and KUAL.
 
 Target device:
 
@@ -19,7 +19,7 @@ The KUAL extension provides three actions:
 - **Refresh now**: performs one download and display attempt;
 - **Stop and restore Kindle**: stops the loop, restores the framework, and re-enables the normal screensaver behavior.
 
-Each refresh downloads to a temporary file, verifies the PNG signature, atomically replaces the saved image, clears the screen, and displays it with Kindle's built-in `eips`. A failed or invalid download leaves the current screen unchanged.
+Each refresh reads the Kindle battery level from `com.lab126.powerd`, appends it to the image request, and lets the Mac service draw a compact battery icon and percentage in the upper-right corner. It then downloads to a temporary file, verifies the PNG signature, atomically replaces the saved image, clears the screen, and displays it with Kindle's built-in `eips`. A failed or invalid download leaves the current screen unchanged.
 
 The client uses `curl` when available and otherwise uses `wget`. It stores only the latest PNG, PID, and a local log under its extension directory.
 
