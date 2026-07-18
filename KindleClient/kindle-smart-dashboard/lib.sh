@@ -56,6 +56,15 @@ resume_kindle_ui() {
         pause_method=$(sed -n '1p' "$ui_state_path")
     fi
 
+    # Remove the dashboard framebuffer before the stock UI starts repainting.
+    # Otherwise X may only redraw damaged regions and leave dashboard fragments
+    # mixed with Home or Library.
+    if command -v eips >/dev/null 2>&1; then
+        eips -c >/dev/null 2>&1 || true
+    elif [ -x /usr/sbin/eips ]; then
+        /usr/sbin/eips -c >/dev/null 2>&1 || true
+    fi
+
     case "$pause_method" in
         cvm*)
             if command -v killall >/dev/null 2>&1; then
@@ -75,6 +84,11 @@ resume_kindle_ui() {
             fi
             ;;
     esac
+
+    sleep 1
+    if command -v lipc-set-prop >/dev/null 2>&1; then
+        lipc-set-prop -- com.lab126.appmgrd start app://com.lab126.booklet.home >/dev/null 2>&1 || true
+    fi
 
     rm -f "$ui_state_path"
 }

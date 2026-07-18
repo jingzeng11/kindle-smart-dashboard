@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <time.h>
 
 #define SCREEN_WIDTH 600
 #define SCREEN_HEIGHT 800
@@ -155,8 +156,7 @@ static void refresh_region(struct framebuffer *fb, int left, int top, int width,
     ioctl(fb->fd, MXCFB_SEND_UPDATE, &update);
 }
 
-static int append_point(const char *path, int x, int y, int starts_stroke) {
-    int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+static int append_point(int fd, int x, int y, int starts_stroke) {
     if (fd < 0) return -1;
     struct note_point point = {
         .x = (uint16_t)x,
@@ -165,9 +165,33 @@ static int append_point(const char *path, int x, int y, int starts_stroke) {
         .reserved = 0
     };
     ssize_t written = write(fd, &point, sizeof(point));
-    fsync(fd);
-    close(fd);
     return written == (ssize_t)sizeof(point) ? 0 : -1;
+}
+
+static int64_t monotonic_milliseconds(void) {
+    struct timespec value;
+    if (clock_gettime(CLOCK_MONOTONIC, &value) != 0) return 0;
+    return (int64_t)value.tv_sec * 1000 + value.tv_nsec / 1000000;
+}
+
+static void include_dirty_point(int x, int y, int *left, int *top, int *right, int *bottom) {
+    if (x - 8 < *left) *left = x - 8;
+    if (y - 8 < *top) *top = y - 8;
+    if (x + 8 > *right) *right = x + 8;
+    if (y + 8 > *bottom) *bottom = y + 8;
+}
+
+static void flush_dirty_region(struct framebuffer *fb, int force, int *left, int *top,
+                               int *right, int *bottom, int64_t *last_refresh) {
+    if (*right < *left || *bottom < *top) return;
+    int64_t now = monotonic_milliseconds();
+    if (!force && now - *last_refresh < 180) return;
+    refresh_region(fb, *left, *top, *right - *left + 1, *bottom - *top + 1);
+    *left = SCREEN_WIDTH;
+    *top = SCREEN_HEIGHT;
+    *right = -1;
+    *bottom = -1;
+    *last_refresh = now;
 }
 
 static void redraw_strokes(struct framebuffer *fb, const char *path) {
@@ -235,26 +259,11 @@ static void clear_strokes(const char *path) {
     if (fd >= 0) close(fd);
 }
 
-static void draw_active_indicator(struct framebuffer *fb) {
-    for (int x = 38; x <= 130; x++) {
-        put_black_pixel(fb, x, 708);
-        put_black_pixel(fb, x, 744);
-    }
-    for (int y = 708; y <= 744; y++) {
-        put_black_pixel(fb, 38, y);
-        put_black_pixel(fb, 130, y);
-    }
-    refresh_region(fb, 35, 705, 100, 43);
-}
-
 static int toolbar_action(int x, int y) {
     if (y < TOOLBAR_TOP) return 0;
-    if (x >= 30 && x < 135) return 1;   /* write */
-    if (x >= 135 && x < 245) return 2;  /* undo */
-    if (x >= 245 && x < 355) return 3;  /* clear */
-    if (x >= 355 && x < 465) return 4;  /* done */
-    if (x >= 465 && x <= 599) return 5; /* read */
-    return 0;
+    if (x < 200) return 1;  /* undo */
+    if (x < 400) return 2;  /* clear */
+    return 3;               /* read */
 }
 
 static int watch_touch(const char *device_path, const char *image_path,
@@ -263,10 +272,13 @@ static int watch_touch(const char *device_path, const char *image_path,
     if (input_fd < 0) return 2;
     struct framebuffer fb;
     if (framebuffer_open(&fb) < 0) { close(input_fd); return 3; }
+    int notes_fd = open(notes_path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (notes_fd < 0) { framebuffer_close(&fb); close(input_fd); return 4; }
 
-    int writing_mode = 0;
     int touching = 0, drawing = 0, stroke_started = 0;
     int x = 0, y = 0, start_x = 0, start_y = 0, previous_x = 0, previous_y = 0;
+    int dirty_left = SCREEN_WIDTH, dirty_top = SCREEN_HEIGHT, dirty_right = -1, dirty_bottom = -1;
+    int64_t last_refresh = monotonic_milliseconds();
     struct input_event event;
 
     while (read(input_fd, &event, sizeof(event)) == (ssize_t)sizeof(event)) {
@@ -278,23 +290,19 @@ static int watch_touch(const char *device_path, const char *image_path,
                 drawing = 0;
                 stroke_started = 0;
             } else {
+                if (drawing) {
+                    flush_dirty_region(&fb, 1, &dirty_left, &dirty_top, &dirty_right, &dirty_bottom, &last_refresh);
+                    fsync(notes_fd);
+                }
                 if (touching && !drawing) {
                     int action = toolbar_action(start_x, start_y);
                     if (action == 1) {
-                        writing_mode = 1;
-                        draw_active_indicator(&fb);
-                    } else if (action == 2) {
                         undo_last_stroke(notes_path);
                         restore_and_redraw(&fb, image_path, notes_path);
-                        if (writing_mode) draw_active_indicator(&fb);
-                    } else if (action == 3) {
+                    } else if (action == 2) {
                         clear_strokes(notes_path);
                         restore_and_redraw(&fb, image_path, notes_path);
-                        if (writing_mode) draw_active_indicator(&fb);
-                    } else if (action == 4) {
-                        writing_mode = 0;
-                        restore_and_redraw(&fb, image_path, notes_path);
-                    } else if (action == 5) {
+                    } else if (action == 3) {
                         kill(dashboard_pid, SIGTERM);
                         break;
                     }
@@ -312,23 +320,26 @@ static int watch_touch(const char *device_path, const char *image_path,
                 previous_y = y;
                 stroke_started = 1;
             }
-            if (writing_mode && start_y >= WRITING_TOP && start_y < WRITING_BOTTOM &&
+            if (start_y >= WRITING_TOP && start_y < WRITING_BOTTOM &&
                 y >= WRITING_TOP && y < WRITING_BOTTOM) {
                 if (!drawing) {
-                    append_point(notes_path, x, y, 1);
+                    append_point(notes_fd, x, y, 1);
                     draw_brush(&fb, x, y);
                     drawing = 1;
                 } else if (x != previous_x || y != previous_y) {
-                    append_point(notes_path, x, y, 0);
+                    append_point(notes_fd, x, y, 0);
                     draw_line(&fb, previous_x, previous_y, x, y);
                 }
+                include_dirty_point(previous_x, previous_y, &dirty_left, &dirty_top, &dirty_right, &dirty_bottom);
+                include_dirty_point(x, y, &dirty_left, &dirty_top, &dirty_right, &dirty_bottom);
                 previous_x = x;
                 previous_y = y;
-                refresh_region(&fb, x - 8, y - 8, 16, 16);
+                flush_dirty_region(&fb, 0, &dirty_left, &dirty_top, &dirty_right, &dirty_bottom, &last_refresh);
             }
         }
     }
 
+    close(notes_fd);
     framebuffer_close(&fb);
     close(input_fd);
     return 0;

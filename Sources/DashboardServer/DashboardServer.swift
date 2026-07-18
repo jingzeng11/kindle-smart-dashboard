@@ -123,26 +123,19 @@ enum DashboardOverlay {
     }
 
     private static func drawTouchControls(height: CGFloat) {
-        let labels = ["手写", "撤销", "清空", "完成", "阅读"]
-        let positions: [CGFloat] = [40, 148, 256, 364, 472]
+        let labels = ["撤销", "清空", "阅读"]
+        let positions: [CGFloat] = [0, 200, 400]
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 15, weight: .medium),
-            .foregroundColor: NSColor.black,
+            .font: NSFont.systemFont(ofSize: 14, weight: .regular),
+            .foregroundColor: NSColor(deviceWhite: 0.42, alpha: 1),
             .paragraphStyle: paragraph
         ]
 
-        NSColor.white.setFill()
-        NSRect(x: 35, y: height - 748, width: 530, height: 42).fill()
-        NSColor.black.setStroke()
         for (label, x) in zip(labels, positions) {
-            let rect = NSRect(x: x, y: height - 744, width: 88, height: 34)
-            let outline = NSBezierPath(roundedRect: rect, xRadius: 5, yRadius: 5)
-            outline.lineWidth = 1
-            outline.stroke()
             (label as NSString).draw(
-                in: NSRect(x: x, y: height - 739, width: 88, height: 22),
+                in: NSRect(x: x, y: height - 739, width: 200, height: 22),
                 withAttributes: attributes
             )
         }
